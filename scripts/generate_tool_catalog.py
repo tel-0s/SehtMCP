@@ -8,7 +8,7 @@ parser.add_argument("catalog", type=Path, help="tools.json emitted by verify_mcp
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 tools = json.loads(args.catalog.read_text(encoding="utf-8"))
-lines = ["# SehtMCP tool catalog", "", f"Generated from the running 0.1.0 server: **{len(tools)} tools**. See [machine-readable schemas](tools.json) for complete JSON Schema definitions. Tool results use structured JSON plus text; NIF previews also contain PNG image blocks.", ""]
+lines = ["# SehtMCP tool catalog", "", f"Generated from the running server: **{len(tools)} tools**. See [machine-readable schemas](tools.json) for complete JSON Schema definitions. Tool results use structured JSON plus text; NIF and navmesh previews also contain PNG image blocks.", ""]
 for tool in sorted(tools, key=lambda t: t["name"]):
     lines.extend([f"## `{tool['name']}`", "", tool.get("description", ""), ""])
     schema = tool["inputSchema"]

@@ -1,16 +1,21 @@
 """Package a tested publish directory and Git-visible source files. No upload occurs."""
 import hashlib
+import argparse
 from pathlib import Path
 import subprocess
 import zipfile
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[1]
 artifacts = root / "artifacts"
-published = artifacts / "publish/win-x64"
+parser = argparse.ArgumentParser()
+parser.add_argument("--publish-directory", type=Path, default=artifacts / "publish/win-x64")
+published = parser.parse_args().publish_directory.resolve()
+version = ET.parse(root / "src/SehtMcp/SehtMcp.csproj").findtext(".//Version")
 if not (published / "SehtMcp.exe").exists():
     raise SystemExit("Run scripts/build.ps1 first.")
-binary = artifacts / "SehtMCP-0.1.0-win-x64.zip"
-source = artifacts / "SehtMCP-0.1.0-source.zip"
+binary = artifacts / f"SehtMCP-{version}-win-x64.zip"
+source = artifacts / f"SehtMCP-{version}-source.zip"
 with zipfile.ZipFile(binary, "w", zipfile.ZIP_DEFLATED) as zip:
     for file in sorted(published.rglob("*")):
         if file.is_file():

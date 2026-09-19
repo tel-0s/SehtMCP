@@ -6,6 +6,9 @@ namespace SehtMcp.Tests;
 public sealed class NifTests
 {
     public static byte[] Triangle()
+        => Mesh([[-1, 0, -1], [1, 0, -1], [0, 0, 1]], [0, 1, 2]);
+
+    public static byte[] Mesh(float[][] vertices, ushort[] indices)
     {
         using var block = new MemoryStream(); using (var w = new BinaryWriter(block, Encoding.UTF8, true))
         {
@@ -14,9 +17,9 @@ public sealed class NifTests
             w.Write(-1); // collision
             foreach (var f in new float[] { 0, 0, 0, 2 }) w.Write(f); // bound
             w.Write(-1); w.Write(-1); w.Write(-1); // skin, shader, alpha
-            w.Write((1UL << 44) | 4UL); w.Write((ushort)1); w.Write((ushort)3); w.Write(54u);
-            foreach (var f in new float[] { -1, 0, -1, 0, 1, 0, -1, 0, 0, 0, 1, 0 }) w.Write(f);
-            w.Write((ushort)0); w.Write((ushort)1); w.Write((ushort)2); w.Write(0u);
+            w.Write((1UL << 44) | 4UL); w.Write((ushort)(indices.Length / 3)); w.Write((ushort)vertices.Length); w.Write((uint)(vertices.Length * 16 + indices.Length * 2));
+            foreach (var v in vertices) { foreach (var f in v) w.Write(f); w.Write(0f); }
+            foreach (var index in indices) w.Write(index); w.Write(0u);
         }
         using var output = new MemoryStream(); using (var w = new BinaryWriter(output, Encoding.UTF8, true))
         {

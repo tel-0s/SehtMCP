@@ -30,7 +30,20 @@ public static class Guidance
            limits. plugin_save also writes and re-reads the binary before atomic publication.
            All outputs stay in workspace; replacement needs overwrite=true and makes a backup.
         10. Inspect the result in xEdit/CK and playtest before distributing. Validation does
-            not check quest logic, navmesh, balance, assets, or runtime behavior.
+            not check quest logic, collision agreement, balance, assets, or runtime behavior.
+
+        New interior navmeshes: navmesh_generate_from_cell bakes placed static NIF render
+        geometry with Recast. Supply explicit BSA paths in archives when assets are packed.
+        It fails on missing/unsupported selected geometry. Render surfaces can differ from
+        Havok collision. navmesh_generate instead accepts explicit scene/proxy triangles;
+        navmesh_create accepts already-authored walkable triangles without clearance baking.
+        Coordinates are Skyrim units, Z-up; baking needs upward floor winding. Optional
+        walkableSeeds retain only the components nearest those points, excluding roof islands.
+        Use dryRun first, then navmesh_preview and navmesh_get to review the generated mesh.
+        navmesh_nearest finds a triangle for a door arrival point. navmesh_link_door writes
+        NAVM/NAVI door links; both teleport endpoints need their own links and runtime checks.
+        Regeneration preserves FormKeys and refuses linked meshes or changed component counts.
+        plugin_validate checks NAVM topology, lookup bounds/grid, and NAVI consistency.
 
         ESP, ESM, standalone ESL, and ESL-flagged ESP are supported. Light files use the
         conservative 0x800..0xFFF range (2048 new records); compaction is never automatic.
@@ -54,7 +67,7 @@ public static class Guidance
         Use editor_launch(application="nifskope", file=<absolute path>) for a full viewer.
 
         CK integration in this release is launch/status plus compatible plugin output.
-        There is no injected CK bridge, live form mutation, navmesh generation, FaceGen,
+        There is no injected CK bridge, live form mutation, exterior navmesh finalization, FaceGen,
         landscape sculpting, or automated CK save. Papyrus uses the installed compiler,
         with configured flags and import paths. No arbitrary shell/code execution tool exists.
         """;

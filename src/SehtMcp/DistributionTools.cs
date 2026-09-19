@@ -42,7 +42,7 @@ public sealed class DistributionTools(PluginWorkspace workspace, AssetService as
 
     private object BuildManifest(PluginSession s) => new
     {
-        format = "seht-manifest-1", generator = "SehtMCP 0.1.0", plugin = s.Mod.ModKey.ToString(), revision = s.Revision, dirty = s.Dirty, isMaster = s.Mod.IsMaster, isLight = s.Mod.IsSmallMaster, masters = s.Masters.Select(m => m.ToString()).ToArray(), sha256 = s.SavedHash,
+        format = "seht-manifest-1", generator = "SehtMCP 0.2.0", plugin = s.Mod.ModKey.ToString(), revision = s.Revision, dirty = s.Dirty, isMaster = s.Mod.IsMaster, isLight = s.Mod.IsSmallMaster, masters = s.Masters.Select(m => m.ToString()).ToArray(), sha256 = s.SavedHash,
         recordTypes = s.Mod.EnumerateMajorRecords().GroupBy(PluginWorkspace.TypeName).ToDictionary(g => g.Key, g => g.Count()),
         assets = s.Mod.EnumerateAssetLinks(AssetLinkQuery.Listed, null, null).Where(a => !a.IsNull).Select(a => a.DataRelativePath.ToString()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), validation = workspace.Validate(s)
     };

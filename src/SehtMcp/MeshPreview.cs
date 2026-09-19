@@ -9,9 +9,12 @@ namespace SehtMcp;
 public static class MeshPreview
 {
     public static byte[] Render(NifDocument nif, int width, int height, float yaw, float pitch)
+        => Render(nif.Meshes, width, height, yaw, pitch);
+
+    public static byte[] Render(IReadOnlyList<NifMesh> meshes, int width, int height, float yaw, float pitch, bool showEdges = false)
     {
         if (width is < 64 or > 1024 || height is < 64 or > 1024 || !float.IsFinite(yaw) || !float.IsFinite(pitch)) throw new ArgumentException("Preview size must be 64..1024 and angles finite.");
-        var vertices = nif.Meshes.SelectMany(m => m.Vertices).ToArray();
+        var vertices = meshes.SelectMany(m => m.Vertices).ToArray();
         if (vertices.Length == 0) throw new InvalidOperationException("No supported embedded SSE geometry found. Inspect warnings or use NifSkope.");
         var view = Matrix4x4.CreateRotationZ(yaw * MathF.PI / 180) * Matrix4x4.CreateRotationX(pitch * MathF.PI / 180);
         var transformed = vertices.Select(v => Vector3.Transform(v, view)).ToArray();
@@ -26,7 +29,7 @@ public static class MeshPreview
         static float Edge(Vector3 a, Vector3 b, float x, float y) => (x - a.X) * (b.Y - a.Y) - (y - a.Y) * (b.X - a.X);
         var faceBudget = 1500000;
         long pixelBudget = 200000000;
-        foreach (var mesh in nif.Meshes)
+        foreach (var mesh in meshes)
         {
             var points = mesh.Vertices.Select(Project).ToArray();
             for (var i = 0; i < mesh.Indices.Length; i += 3)
@@ -54,7 +57,8 @@ public static class MeshPreview
                     var index = y * width + x;
                     if (z >= zbuffer[index]) continue;
                     zbuffer[index] = z;
-                    pixels[index * 3] = (byte)baseColor.X; pixels[index * 3 + 1] = (byte)baseColor.Y; pixels[index * 3 + 2] = (byte)baseColor.Z;
+                    var color = showEdges && Math.Min(u, Math.Min(v, w)) < .018f ? baseColor * .25f : baseColor;
+                    pixels[index * 3] = (byte)color.X; pixels[index * 3 + 1] = (byte)color.Y; pixels[index * 3 + 2] = (byte)color.Z;
                 }
                 Vector3 transformedVertex(int index) => Vector3.Transform(mesh.Vertices[index], view);
             }

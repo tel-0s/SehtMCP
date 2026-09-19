@@ -11,6 +11,10 @@ flowchart LR
   Workspace --> Mutagen[Mutagen Skyrim records and binary IO]
   Assets --> BSA[Mutagen BSA reader]
   Assets --> NIF[NIF parser and PNG rasterizer]
+  Tools --> Navmesh[Navmesh geometry and records]
+  Navmesh --> Recast[DotRecast baking]
+  Navmesh --> Workspace
+  Navmesh --> Assets
   External --> CK[Creation Kit / NifSkope]
   External --> Papyrus[Papyrus compiler]
   Workspace --> Staging[Validated staging file]
@@ -42,6 +46,16 @@ Atomicity is per plugin file. Localized multi-file output is blocked because it 
 The parser is read-only and uses block size boundaries. It accepts Skyrim LE/SE header versions, checks counts/indices, parses texture sets and selected scene node/geometry types, and reports unsupported geometry. Position transforms use System.Numerics with NIF rotation conventions adapted to row vectors. The software renderer bounds image dimensions, geometry counts, and raster work; it returns a PNG through the SDK's image factory so the protocol carries correctly encoded image data.
 
 This is a geometry inspection aid. Unsupported materials/skin/animation are not approximated as if they had been evaluated. The complete source NIF remains intact for external viewers.
+
+## Interior navigation
+
+`NavmeshGeometry` validates input triangle soups, rotates Skyrim Z-up coordinates into Recast Y-up without changing winding, and runs a bounded Recast raster/clearance/region/polygon-mesh build. It exports shared polygon topology with three vertices per polygon, reconstructs adjacency and separates connected components. Optional seed points retain only selected components. `NavmeshScene` collects explicitly supported placed NIF render geometry, preserving NIF and REFR transforms and reporting sources and exclusions.
+
+The exporter omits Recast's optional per-polygon detail triangulation: testing it on stacked interior kit geometry exposed overlapping edges. Exported contour heights are quantized to `cellHeight`; precise surface matching still needs review. All managed console diagnostics are routed to stderr while the SDK owns raw stdout, including diagnostics from third-party geometry code.
+
+`NavmeshRecords` writes NAVM under the interior cell and local NAVI information through Mutagen. It supplies interior parent links, reciprocal adjacency, bounds, an exhaustive single-bucket spatial grid, island geometry and explicit door associations. Rebuilds preserve FormKeys and reject inherited meshes, changed component counts and triangle links that would become stale. The plugin validator checks navigation structure before save. These operations use the same clone/revision/rollback boundary as other authoring tools; no running editor process is involved.
+
+See [NAVMESH.md](NAVMESH.md) for input conventions, budgets and the boundary between render geometry and engine collision.
 
 ## Process integrations
 

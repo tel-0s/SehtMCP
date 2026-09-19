@@ -1,4 +1,4 @@
-# Support matrix: 0.1.0
+# Support matrix: 0.2.0
 
 This file distinguishes implemented behavior from future integration work.
 
@@ -12,6 +12,8 @@ This file distinguishes implemented behavior from future integration work.
 | Magic | Effects, spell entries, magnitude/duration, and condition FormLinks tested |
 | Crafting and items | Weapon stats, keyword links, constructible records tested; exposed armor/container/leveled-list definitions require appropriate engine data |
 | Interior cells | Implemented with interior block/subblock hierarchy |
+| Interior navmesh | Recast baking from explicit triangles or supported placed NIF render geometry; direct triangle authoring; new-cell NAVM/NAVI, adjacency/grid/islands, seeds and explicit teleport-door links; does not extract Havok collision |
+| Navmesh review | Paginated topology, nearest triangle queries, PNG previews, structural validation; no in-game pathfinding or CK finalization test |
 | Exterior cells | Implemented with grid grouping; negative coordinates tested; no terrain/navmesh synthesis |
 | Placed references | REFR/ACHR, transforms, scale, persistent/temporary collection; advanced worldspace persistent-reference semantics still require CK review |
 | Nested overrides | Mutagen source contexts preserve parents; regression test ensures siblings are not copied |
@@ -37,6 +39,6 @@ This file distinguishes implemented behavior from future integration work.
 2. Localized STRINGS output with atomic multi-file save and language selection.
 3. Better NIF geometry coverage (skin partitions/dynamic geometry), UVs, materials, and model-facing camera controls.
 4. An explicitly versioned Creation Kit bridge, dispatching mutations on the editor thread with capability probing. Pin supported CK builds instead of guessing memory offsets.
-5. CK-produced assets: navmesh, FaceGen, dialogue fragments, lip files, terrain/LOD workflows. These require concrete implementations and separate integration tests before tools advertise support.
+5. CK-produced assets: exterior navmesh stitching/finalization, Havok collision extraction, FaceGen, dialogue fragments, lip files, terrain/LOD workflows. These require concrete implementations and separate integration tests before tools advertise support.
 
 The MCP layer is designed to accept these services without changing canonical FormKeys, revision semantics, or the existing output boundary.

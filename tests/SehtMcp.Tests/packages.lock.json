@@ -29,6 +29,19 @@
         "resolved": "3.1.5",
         "contentHash": "tKi7dSTwP4m5m9eXPM2Ime4Kn7xNf4x4zT9sdLO/G4hZVnQCRiMTWoSZqI/pYTVeI27oPPqHBKYI/DjJ9GsYgA=="
       },
+      "DotRecast.Core": {
+        "type": "Transitive",
+        "resolved": "2026.3.1",
+        "contentHash": "26TjlLSHnTY3qBu0AzuItDqV8Q57TNdSsi1GCnrmCZlwQmUaLScz/FlZUwSJcv9P0PPKiAClfgwCVk8p+Z2ccw=="
+      },
+      "DotRecast.Recast": {
+        "type": "Transitive",
+        "resolved": "2026.3.1",
+        "contentHash": "DHSfwiKJ4T+e/YjGUMVbTabegcyjk/cEhI2edEn9uSAnRmB6mI78LNtP0cvHYiyShx1Csb26bTrmefUVt5kygA==",
+        "dependencies": {
+          "DotRecast.Core": "2026.3.1"
+        }
+      },
       "DynamicData": {
         "type": "Transitive",
         "resolved": "9.4.31",
@@ -629,6 +642,7 @@
       "sehtmcp": {
         "type": "Project",
         "dependencies": {
+          "DotRecast.Recast": "[2026.3.1, )",
           "Microsoft.Extensions.Hosting": "[10.0.12, )",
           "ModelContextProtocol": "[2.2.0, )",
           "Mutagen.Bethesda.Skyrim": "[0.54.4, )"

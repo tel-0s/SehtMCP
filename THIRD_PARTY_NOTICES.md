@@ -6,6 +6,8 @@ This inventory is generated from pinned, restored NuGet package metadata. It rec
 
 | Package | Version | License | Source |
 | --- | --- | --- | --- |
+| DotRecast.Core | 2026.3.1 | See package metadata | [source](https://github.com/ikpil/DotRecast/tree/16976369bebab455b59bcb93c799c775a91d816d) |
+| DotRecast.Recast | 2026.3.1 | See package metadata | [source](https://github.com/ikpil/DotRecast/tree/16976369bebab455b59bcb93c799c775a91d816d) |
 | DynamicData | 9.4.31 | MIT | [source](https://github.com/reactiveui/DynamicData/tree/8db480674d0971c46e4ea872c74f3973e2496e2b) |
 | FluentResults | 3.15.2 | MIT | [source](https://github.com/altmann/FluentResults/tree/8b675de7e8b6e4c0921e95138c99e15fd52cde40) |
 | GameFinder.Common | 4.9.0 | GPL-3.0-only | [source](https://github.com/erri120/GameFinder/tree/efa23bd6d02ec07aa9fb1abe1025efafe3190d9f) |

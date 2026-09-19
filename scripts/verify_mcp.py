@@ -73,6 +73,7 @@ def main():
         tools = request("tools/list")["tools"]
         (output / "tools.json").write_text(json.dumps(tools, indent=2))
         assert len(tools) >= 35
+        assert {"navmesh_generate", "navmesh_generate_from_cell", "navmesh_create", "navmesh_get", "navmesh_nearest", "navmesh_link_door", "navmesh_preview"} <= {t["name"] for t in tools}
         assert request("resources/list")["resources"]
         assert request("prompts/list")["prompts"]
         status = call("seht_status")
@@ -96,6 +97,22 @@ def main():
         package = call("plugin_package", session=session, output="SehtSmoke.zip")
         assert Path(package["path"]).exists()
         print("Authored, validated, saved, and reopened an ESL-flagged ESP", flush=True)
+        nav_session = call("plugin_create", filename="SehtNavSmoke.esp", kind="esp")["session"]
+        nav_cell = call("record_create", session=nav_session, expectedRevision=0, type="Cell", editorId="SehtNavRoom", fields={})["result"]["formKey"]
+        geometry = {"vertices": [[-256,-256,0],[256,-256,0],[256,256,0],[-256,256,0]], "triangles": [[0,1,2],[0,2,3]]}
+        call("navmesh_generate", session=nav_session, expectedRevision=1, cell=nav_cell, dryRun=True, **geometry)
+        baked = call("navmesh_generate", session=nav_session, expectedRevision=1, cell=nav_cell, settings={"agentRadius":16}, walkableSeeds=[[0,0,0]], **geometry)
+        nav_key = baked["result"]["components"][0]["formKey"]
+        assert call("navmesh_get", session=nav_session, navmesh=nav_key)["triangleCount"] > 0
+        assert call("navmesh_nearest", session=nav_session, cell=nav_cell, x=0, y=0, z=0)["distance"] <= 4
+        assert call("plugin_validate", session=nav_session)["valid"]
+        nav_saved = call("plugin_save", session=nav_session, expectedRevision=2, relativePath="SehtNavSmoke.esp")
+        assert call("plugin_open", path=nav_saved["path"])
+        nav_preview = request("tools/call", {"name":"navmesh_preview", "arguments":{"session":nav_session, "cell":nav_cell, "pitch":90}})
+        assert not nav_preview.get("isError"), nav_preview
+        (output / "navmesh-preview.png").write_bytes(base64.b64decode(next(c["data"] for c in nav_preview["content"] if c["type"] == "image")))
+        (output / "navmesh-report.json").write_text(json.dumps({"baked":baked, "saved":nav_saved}, indent=2))
+        print("Baked, inspected, previewed, validated, saved, and reopened interior NAVM/NAVI", flush=True)
         if options.local:
             source = str(Path(config["gameDirectory"]) / "Data" / "Skyrim - Meshes0.bsa")
             meshes = call("archive_search", archive=source, query="longsword.nif", limit=5)
@@ -111,6 +128,18 @@ def main():
             image = next(c for c in preview["content"] if c["type"] == "image")
             (output / "nif-preview.png").write_bytes(base64.b64decode(image["data"]))
             print(f"Read and rendered installed NIF: {mesh}", flush=True)
+            scene_session = call("plugin_create", filename="SehtNavScene.esp", kind="esp", masters=["Skyrim.esm"])["session"]
+            scene_cell = call("record_create", session=scene_session, expectedRevision=0, type="Cell", editorId="SehtNavScene", fields={})["result"]["formKey"]
+            call("cell_place", session=scene_session, expectedRevision=1, cell=scene_cell, baseFormKey="04EFCF:Skyrim.esm", editorId="SehtFloor", x=1024, y=512, z=64, rz=1.57079632679)
+            archives = [str(p) for p in (Path(config["gameDirectory"]) / "Data").glob("Skyrim - Meshes*.bsa")]
+            scene = call("navmesh_generate_from_cell", session=scene_session, expectedRevision=2, cell=scene_cell, archives=archives)
+            (output / "navmesh-scene.json").write_text(json.dumps(scene, indent=2))
+            assert call("plugin_validate", session=scene_session)["valid"]
+            call("plugin_save", session=scene_session, expectedRevision=3, relativePath="SehtNavScene.esp")
+            scene_preview = request("tools/call", {"name":"navmesh_preview", "arguments":{"session":scene_session,"cell":scene_cell}})
+            assert not scene_preview.get("isError"), scene_preview
+            (output / "navmesh-scene.png").write_bytes(base64.b64decode(next(c["data"] for c in scene_preview["content"] if c["type"] == "image")))
+            print("Baked navmesh from a transformed vanilla Dwemer floor NIF read from BSA", flush=True)
             call("script_write", name="SehtSmoke", source="Scriptname SehtSmoke\n\nInt Function Add(Int a, Int b) Global\n  Return a + b\nEndFunction\n")
             compilation = call("script_compile", name="SehtSmoke")
             assert compilation["success"], compilation

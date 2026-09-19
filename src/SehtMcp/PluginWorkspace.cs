@@ -270,6 +270,7 @@ public sealed class PluginWorkspace(SehtConfig config) : IDisposable
             }
             if (r.IsDeleted) issues.Add(new("warning", "deleted_record", "Deleted records can break dependent mods. Prefer disabling placed references where appropriate.", r.FormKey.ToString()));
         }
+        issues.AddRange(NavmeshRecords.Validate(s));
         return new(!issues.Any(i => i.Severity == "error"), records.Length, own.Length, s.Mod.IsSmallMaster, issues);
     }
 

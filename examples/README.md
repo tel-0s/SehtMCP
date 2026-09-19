@@ -8,3 +8,5 @@ The `.batch.json` files are the `operations` argument of `plugin_batch`. Create 
 For a practical item variant, create a session with Skyrim.esm, find a source record with `record_search(includeMasters=true)`, inspect it, then call `record_duplicate` with a new EditorID. That preserves the base object's sound, equipment, model, and other settings while you adjust selected fields.
 
 For cells, create a Cell for an interior or a Worldspace plus `cell_create_exterior` for an exterior. Use `cell_place` for transforms. Geometry and navmesh are separate requirements; creating cell records does not generate a navigable world.
+
+`navmesh-room.json` is an argument object for `navmesh_create`, not a batch. Substitute the current session, revision and new interior Cell FormKey, inspect the dry run, then commit. See [the navmesh workflow](../docs/NAVMESH.md) for Recast baking from placed cell geometry, previews and door links.

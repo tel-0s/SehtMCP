@@ -2,6 +2,15 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "DotRecast.Recast": {
+        "type": "Direct",
+        "requested": "[2026.3.1, )",
+        "resolved": "2026.3.1",
+        "contentHash": "DHSfwiKJ4T+e/YjGUMVbTabegcyjk/cEhI2edEn9uSAnRmB6mI78LNtP0cvHYiyShx1Csb26bTrmefUVt5kygA==",
+        "dependencies": {
+          "DotRecast.Core": "2026.3.1"
+        }
+      },
       "Microsoft.Extensions.Hosting": {
         "type": "Direct",
         "requested": "[10.0.12, )",
@@ -53,6 +62,11 @@
           "Mutagen.Bethesda.Core": "0.54.4",
           "Noggog.CSharpExt": "4.3.0"
         }
+      },
+      "DotRecast.Core": {
+        "type": "Transitive",
+        "resolved": "2026.3.1",
+        "contentHash": "26TjlLSHnTY3qBu0AzuItDqV8Q57TNdSsi1GCnrmCZlwQmUaLScz/FlZUwSJcv9P0PPKiAClfgwCVk8p+Z2ccw=="
       },
       "DynamicData": {
         "type": "Transitive",

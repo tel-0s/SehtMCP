@@ -1,6 +1,6 @@
 # SehtMCP tool catalog
 
-Generated from the running 0.1.0 server: **45 tools**. See [machine-readable schemas](tools.json) for complete JSON Schema definitions. Tool results use structured JSON plus text; NIF previews also contain PNG image blocks.
+Generated from the running server: **52 tools**. See [machine-readable schemas](tools.json) for complete JSON Schema definitions. Tool results use structured JSON plus text; NIF and navmesh previews also contain PNG image blocks.
 
 ## `archive_extract`
 
@@ -106,6 +106,101 @@ Read an MO2 profile's modlist.txt and plugins.txt without changing them. Returns
 | --- | --- | --- |
 | `profileDirectory` | yes | string |
 | `modsDirectory` | yes | string |
+
+## `navmesh_create`
+
+Create NAVM/NAVI records for a new interior cell from explicitly authored walkable triangles. vertices are [x,y,z] in Skyrim cell coordinates; triangles are zero-based [a,b,c]. Welds identical positions, orients upward, builds reciprocal adjacency and spatial lookup, and separates disconnected components. Does not infer obstacles or actor clearance: use navmesh_generate for that. Atomic; plugin_save persists the result. Rebuilding linked meshes or changing component count is refused.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `expectedRevision` | yes | integer |
+| `cell` | yes | string |
+| `vertices` | yes | array |
+| `triangles` | yes | array |
+| `replaceExisting` | no | boolean; default `false` |
+| `dryRun` | no | boolean; default `false` |
+
+## `navmesh_generate`
+
+Bake a new interior cell's scene triangle geometry with Recast into Skyrim NAVM/NAVI records. vertices [x,y,z], triangles zero-based [a,b,c], Z-up Skyrim units. Floor winding must face upward; include walls, ceilings, stairs and obstacles to enforce clearance. Settings control actor height/radius, climb, slope and voxel resolution. Returns one NAVM per connected component; all records commit atomically. Geometry is supplied explicitly; this tool does not read Havok collision or the running CK. dryRun leaves the session unchanged.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `expectedRevision` | yes | integer |
+| `cell` | yes | string |
+| `vertices` | yes | array |
+| `triangles` | yes | array |
+| `settings` | no | object/null; default `null` |
+| `walkableSeeds` | no | array/null; default `null` |
+| `replaceExisting` | no | boolean; default `false` |
+| `dryRun` | no | boolean; default `false` |
+
+## `navmesh_generate_from_cell`
+
+Collect placed NIF render geometry in a new interior cell and bake NAVM/NAVI with Recast. Defaults to enabled Static references; references can explicitly select architecture/obstacles. Applies NIF node and REFR transforms. Loose files win; archives are explicit BSA paths in low-to-high priority order. Missing/unsupported/animated selected geometry fails the whole operation. Render geometry can differ from Havok collision: review the result or supply collision/proxy triangles to navmesh_generate. Does not process dynamic doors, actors, or conditional enable states. dryRun leaves the session unchanged and reports geometry sources/exclusions.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `expectedRevision` | yes | integer |
+| `cell` | yes | string |
+| `archives` | no | array/null; default `null` |
+| `references` | no | array/null; default `null` |
+| `settings` | no | object/null; default `null` |
+| `walkableSeeds` | no | array/null; default `null` |
+| `replaceExisting` | no | boolean; default `false` |
+| `dryRun` | no | boolean; default `false` |
+
+## `navmesh_get`
+
+Inspect a NAVM's parent, bounds, vertex and triangle counts, paginated geometry, adjacency, edge links and door links. offset/limit page both vertices and triangles independently (limit 1..500); indices are absolute zero-based indices. Use this to choose an explicit door triangle or review generated topology.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `navmesh` | yes | string |
+| `offset` | no | integer; default `0` |
+| `limit` | no | integer; default `100` |
+
+## `navmesh_link_door`
+
+Associate a persistent teleport-door REFR in this new interior cell with an explicit NAVM triangle. Writes PathingDoor CRC, NAVM Door flag/link, and synchronized NAVI links. Choose a triangle at the door's arrival marker using navmesh_get. Both destination endpoints need valid navmeshes and links; this does not edit teleport destinations, finalize exterior navmeshes, or verify runtime pathing. Refuses moving an existing door link silently.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `expectedRevision` | yes | integer |
+| `navmesh` | yes | string |
+| `door` | yes | string |
+| `triangle` | yes | integer |
+
+## `navmesh_nearest`
+
+Find the closest triangle surface to a Skyrim-space point in a cell's navmeshes. Returns the NAVM FormKey, triangle index, snapped point and 3D distance, or fails if no surface is within maxDistance. Useful for matching a teleport arrival marker to navmesh_link_door. Does not establish walkability or line of sight between the supplied point and the mesh.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `cell` | yes | string |
+| `x` | yes | number |
+| `y` | yes | number |
+| `z` | yes | number |
+| `maxDistance` | no | number; default `64` |
+
+## `navmesh_preview`
+
+Return a PNG of the cell's navmesh triangles with visible triangle edges and a different shade per NAVM. Angles are degrees; pitch=90 gives a top view. Displays navigation surfaces only, without scene collision or runtime actors. Use after generation to inspect disconnected islands and floor coverage.
+
+| Argument | Required | Schema / default |
+| --- | --- | --- |
+| `session` | yes | string |
+| `cell` | yes | string |
+| `width` | no | integer; default `640` |
+| `height` | no | integer; default `640` |
+| `yaw` | no | number; default `35` |
+| `pitch` | no | number; default `45` |
 
 ## `nif_block_bytes`
 

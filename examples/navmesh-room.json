@@ -1,0 +1,8 @@
+{
+  "session": "YOUR_SESSION",
+  "expectedRevision": 1,
+  "cell": "000800:YourInterior.esp",
+  "vertices": [[-256, -256, 0], [256, -256, 0], [256, 256, 0], [-256, 256, 0]],
+  "triangles": [[0, 1, 2], [0, 2, 3]],
+  "dryRun": true
+}

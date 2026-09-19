@@ -66,6 +66,60 @@
     }
   },
   {
+    "name": "navmesh_create",
+    "description": "Create NAVM/NAVI records for a new interior cell from explicitly authored walkable triangles. vertices are [x,y,z] in Skyrim cell coordinates; triangles are zero-based [a,b,c]. Welds identical positions, orients upward, builds reciprocal adjacency and spatial lookup, and separates disconnected components. Does not infer obstacles or actor clearance: use navmesh_generate for that. Atomic; plugin_save persists the result. Rebuilding linked meshes or changing component count is refused.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "cell": {
+          "type": "string"
+        },
+        "vertices": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "triangles": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "replaceExisting": {
+          "type": "boolean",
+          "default": false
+        },
+        "dryRun": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "cell",
+        "vertices",
+        "triangles"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
     "name": "asset_search",
     "description": "Search loose assets across configured dataRoots by path substring. Paginates results and reports when the scan limit is reached. Skips symlink directories.",
     "inputSchema": {
@@ -143,6 +197,44 @@
       },
       "required": [
         "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "navmesh_nearest",
+    "description": "Find the closest triangle surface to a Skyrim-space point in a cell's navmeshes. Returns the NAVM FormKey, triangle index, snapped point and 3D distance, or fails if no surface is within maxDistance. Useful for matching a teleport arrival marker to navmesh_link_door. Does not establish walkability or line of sight between the supplied point and the mesh.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "cell": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "maxDistance": {
+          "type": "number",
+          "default": 64
+        }
+      },
+      "required": [
+        "session",
+        "cell",
+        "x",
+        "y",
+        "z"
       ]
     },
     "annotations": {
@@ -316,6 +408,36 @@
     }
   },
   {
+    "name": "navmesh_get",
+    "description": "Inspect a NAVM's parent, bounds, vertex and triangle counts, paginated geometry, adjacency, edge links and door links. offset/limit page both vertices and triangles independently (limit 1..500); indices are absolute zero-based indices. Use this to choose an explicit door triangle or review generated topology.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "navmesh": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "session",
+        "navmesh"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
     "name": "record_get",
     "description": "Read typed record data, including loaded masters. Canonical key syntax: 000800:Plugin.esp. Optional field selects a top-level field to inspect large records. depth 1..16, maxItems 1..1000; truncation is marked explicitly.",
     "inputSchema": {
@@ -380,6 +502,121 @@
     },
     "annotations": {
       "readOnlyHint": true
+    }
+  },
+  {
+    "name": "navmesh_generate",
+    "description": "Bake a new interior cell's scene triangle geometry with Recast into Skyrim NAVM/NAVI records. vertices [x,y,z], triangles zero-based [a,b,c], Z-up Skyrim units. Floor winding must face upward; include walls, ceilings, stairs and obstacles to enforce clearance. Settings control actor height/radius, climb, slope and voxel resolution. Returns one NAVM per connected component; all records commit atomically. Geometry is supplied explicitly; this tool does not read Havok collision or the running CK. dryRun leaves the session unchanged.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "cell": {
+          "type": "string"
+        },
+        "vertices": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "triangles": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "settings": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "cellSize": {
+              "description": "Horizontal voxel size in Skyrim units. Smaller values cost more memory and time.",
+              "type": "number"
+            },
+            "cellHeight": {
+              "type": "number"
+            },
+            "agentHeight": {
+              "type": "number"
+            },
+            "agentRadius": {
+              "type": "number"
+            },
+            "maxClimb": {
+              "type": "number"
+            },
+            "maxSlope": {
+              "type": "number"
+            },
+            "maxEdgeLength": {
+              "type": "number"
+            },
+            "maxSimplificationError": {
+              "type": "number"
+            },
+            "minRegionArea": {
+              "description": "Minimum isolated region area in square Skyrim units. Removes small unreachable fragments; set zero to retain all regions.",
+              "type": "number"
+            },
+            "mergeRegionArea": {
+              "type": "number"
+            },
+            "seedMaxDistance": {
+              "description": "Maximum distance in Skyrim units from a walkable seed to its nearest generated surface.",
+              "type": "number"
+            }
+          },
+          "default": null
+        },
+        "walkableSeeds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number"
+            }
+          },
+          "default": null
+        },
+        "replaceExisting": {
+          "type": "boolean",
+          "default": false
+        },
+        "dryRun": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "cell",
+        "vertices",
+        "triangles"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
     }
   },
   {
@@ -735,6 +972,44 @@
     }
   },
   {
+    "name": "navmesh_preview",
+    "description": "Return a PNG of the cell's navmesh triangles with visible triangle edges and a different shade per NAVM. Angles are degrees; pitch=90 gives a top view. Displays navigation surfaces only, without scene collision or runtime actors. Use after generation to inspect disconnected islands and floor coverage.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "cell": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "default": 640
+        },
+        "height": {
+          "type": "integer",
+          "default": 640
+        },
+        "yaw": {
+          "type": "number",
+          "default": 35
+        },
+        "pitch": {
+          "type": "number",
+          "default": 45
+        }
+      },
+      "required": [
+        "session",
+        "cell"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
     "name": "record_search",
     "description": "Search editable records or winning records including loaded masters by EditorID substring, exact type name, or FormKey substring. Results are paginated; returns current revision. limit 1..500.",
     "inputSchema": {
@@ -925,6 +1200,127 @@
     }
   },
   {
+    "name": "navmesh_generate_from_cell",
+    "description": "Collect placed NIF render geometry in a new interior cell and bake NAVM/NAVI with Recast. Defaults to enabled Static references; references can explicitly select architecture/obstacles. Applies NIF node and REFR transforms. Loose files win; archives are explicit BSA paths in low-to-high priority order. Missing/unsupported/animated selected geometry fails the whole operation. Render geometry can differ from Havok collision: review the result or supply collision/proxy triangles to navmesh_generate. Does not process dynamic doors, actors, or conditional enable states. dryRun leaves the session unchanged and reports geometry sources/exclusions.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "cell": {
+          "type": "string"
+        },
+        "archives": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        },
+        "references": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        },
+        "settings": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "cellSize": {
+              "description": "Horizontal voxel size in Skyrim units. Smaller values cost more memory and time.",
+              "type": "number"
+            },
+            "cellHeight": {
+              "type": "number"
+            },
+            "agentHeight": {
+              "type": "number"
+            },
+            "agentRadius": {
+              "type": "number"
+            },
+            "maxClimb": {
+              "type": "number"
+            },
+            "maxSlope": {
+              "type": "number"
+            },
+            "maxEdgeLength": {
+              "type": "number"
+            },
+            "maxSimplificationError": {
+              "type": "number"
+            },
+            "minRegionArea": {
+              "description": "Minimum isolated region area in square Skyrim units. Removes small unreachable fragments; set zero to retain all regions.",
+              "type": "number"
+            },
+            "mergeRegionArea": {
+              "type": "number"
+            },
+            "seedMaxDistance": {
+              "description": "Maximum distance in Skyrim units from a walkable seed to its nearest generated surface.",
+              "type": "number"
+            }
+          },
+          "default": null
+        },
+        "walkableSeeds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number"
+            }
+          },
+          "default": null
+        },
+        "replaceExisting": {
+          "type": "boolean",
+          "default": false
+        },
+        "dryRun": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "cell"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
     "name": "record_schema",
     "description": "Inspect a Mutagen Skyrim type's fields, enum names, collection element types, and polymorphic variants. Use $type for abstract fields. depth 0..3. Names such as Weapon, Npc, Quest, WeaponData, Effect, ScriptEntry.",
     "inputSchema": {
@@ -1036,6 +1432,40 @@
     },
     "annotations": {
       "destructiveHint": true
+    }
+  },
+  {
+    "name": "navmesh_link_door",
+    "description": "Associate a persistent teleport-door REFR in this new interior cell with an explicit NAVM triangle. Writes PathingDoor CRC, NAVM Door flag/link, and synchronized NAVI links. Choose a triangle at the door's arrival marker using navmesh_get. Both destination endpoints need valid navmeshes and links; this does not edit teleport destinations, finalize exterior navmeshes, or verify runtime pathing. Refuses moving an existing door link silently.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "navmesh": {
+          "type": "string"
+        },
+        "door": {
+          "type": "string"
+        },
+        "triangle": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "navmesh",
+        "door",
+        "triangle"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
     }
   },
   {

@@ -1,4 +1,4 @@
-param([string]$Runtime = 'win-x64', [switch]$SkipTests)
+param([string]$Runtime = 'win-x64', [switch]$SkipTests, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Push-Location -LiteralPath $projectRoot
@@ -11,7 +11,7 @@ try {
         dotnet test SehtMCP.sln -c Release --no-build --logger 'console;verbosity=minimal'
         if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
     }
-    $destination = Join-Path $projectRoot ('artifacts/publish/' + $Runtime)
+    $destination = if ($OutputDirectory) { [System.IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $projectRoot ('artifacts/publish/' + $Runtime) }
     dotnet publish src/SehtMcp/SehtMcp.csproj -c Release -r $Runtime --self-contained true -p:RestoreLockedMode=true -o $destination
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
     Copy-Item -LiteralPath LICENSE, README.md, THIRD_PARTY_NOTICES.md, seht.example.json, CONTRIBUTING.md, CHANGELOG.md -Destination $destination
