@@ -173,6 +173,8 @@ public sealed class NavmeshTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(directory, "meshes"));
         File.WriteAllBytes(Path.Combine(directory, "meshes", "floor.nif"), NifTests.Mesh(Floor, [0, 1, 2, 0, 2, 3]));
+        var assetReader = new AssetService(new() { Workspace = directory, DataRoots = [directory] });
+        Assert.NotEmpty(assetReader.Read("MeShEs/FLOOR.NIF"));
         var s = Session(); var key = Cell(s).FormKey.ToString();
         workspace.Mutate(s.Id, 1, session =>
         {

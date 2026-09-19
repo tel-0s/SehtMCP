@@ -15,7 +15,7 @@ public sealed class AssetService(SehtConfig config)
     public object Resolve(string asset)
     {
         asset = Normalize(asset);
-        var matches = config.DataRoots.Select(root => Path.Combine(root, asset.Replace('/', Path.DirectorySeparatorChar))).Where(File.Exists).ToArray();
+        var matches = config.DataRoots.Select(root => FindLoose(root, asset)).Where(p => p is not null).ToArray();
         return new { asset, winner = matches.LastOrDefault(), providersLowToHigh = matches, archiveSearch = "Archives are explicit: use archive_list and archive_search. Loose files win over archives." };
     }
     public byte[] Read(string path, string? archive = null)
@@ -29,9 +29,28 @@ public sealed class AssetService(SehtConfig config)
             using var stream = entry.AsStream();
             return ReadBounded(stream);
         }
-        var resolved = Path.IsPathRooted(path) ? Path.GetFullPath(path) : config.DataRoots.Reverse().Select(r => Path.Combine(r, Normalize(path).Replace('/', Path.DirectorySeparatorChar))).FirstOrDefault(File.Exists) ?? throw new FileNotFoundException("Asset not found in dataRoots. For packed assets specify archive.");
+        var resolved = Path.IsPathRooted(path) ? Path.GetFullPath(path) : config.DataRoots.Reverse().Select(r => FindLoose(r, Normalize(path))).FirstOrDefault(p => p is not null) ?? throw new FileNotFoundException("Asset not found in dataRoots. For packed assets specify archive.");
         using var file = File.OpenRead(resolved);
         return ReadBounded(file);
+    }
+
+    private static string? FindLoose(string root, string asset)
+    {
+        var direct = Path.Combine(root, asset.Replace('/', Path.DirectorySeparatorChar));
+        if (File.Exists(direct)) return direct;
+        // Skyrim asset names are case-insensitive, even when the authoring host's
+        // filesystem is not. Resolve each component without recursively indexing Data.
+        var current = root;
+        foreach (var part in asset.Split('/'))
+        {
+            if (!Directory.Exists(current)) return null;
+            var matches = Directory.EnumerateFileSystemEntries(current)
+                .Where(p => Path.GetFileName(p).Equals(part, StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
+            if (matches.Length == 0) return null;
+            if (matches.Length > 1) throw new IOException($"Ambiguous case-insensitive asset path '{asset}' under '{root}'.");
+            current = matches[0];
+        }
+        return File.Exists(current) ? current : null;
     }
     private byte[] ReadBounded(Stream stream)
     {
