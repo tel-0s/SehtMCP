@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+artifacts/
+workspace/
+seht.local.json
+*.user
+TestResults/
+.research/
+__pycache__/
+*.pyc

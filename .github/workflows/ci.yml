@@ -1,0 +1,32 @@
+name: Build and verify
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: dotnet restore SehtMCP.sln --locked-mode
+      - run: dotnet test SehtMCP.sln --no-restore
+      - run: python scripts/verify_mcp.py
+  publish:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: ./scripts/build.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SehtMCP-win-x64
+          path: artifacts/publish/win-x64/

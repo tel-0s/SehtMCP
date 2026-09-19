@@ -1,0 +1,12 @@
+{
+  "workspace": "D:\\Modding\\SehtWorkspace",
+  "gameDirectory": "D:\\Games\\Skyrim Special Edition",
+  "creationKit": "D:\\Games\\Skyrim Special Edition\\CreationKit.exe",
+  "nifSkope": "D:\\Tools\\NifSkope\\NifSkope.exe",
+  "papyrusCompiler": "D:\\Games\\Skyrim Special Edition\\Papyrus Compiler\\PapyrusCompiler.exe",
+  "papyrusFlags": "D:\\Games\\Skyrim Special Edition\\Data\\Source\\Scripts\\TESV_Papyrus_Flags.flg",
+  "papyrusImports": ["D:\\Games\\Skyrim Special Edition\\Data\\Source\\Scripts"],
+  "dataRoots": ["D:\\Games\\Skyrim Special Edition\\Data"],
+  "maxSessions": 8,
+  "maxAssetBytes": 134217728
+}

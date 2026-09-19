@@ -1,0 +1,17 @@
+[
+  {"op":"create","type":"Keyword","editorId":"SehtMaterial","alias":"material"},
+  {
+    "op":"create","type":"Weapon","editorId":"SehtBlade","alias":"blade",
+    "fields": {
+      "Name":"Seht's Blade",
+      "BasicStats":{"Damage":12,"Value":150,"Weight":8},
+      "Data":{"AnimationType":"OneHandSword","Speed":1,"Reach":1},
+      "Keywords":["$material"],
+      "Model":{"File":"weapons/iron/longsword.nif"}
+    }
+  },
+  {
+    "op":"create","type":"ConstructibleObject","editorId":"SehtRecipe",
+    "fields":{"CreatedObject":"$blade","CreatedObjectCount":1,"WorkbenchKeyword":"$material"}
+  }
+]

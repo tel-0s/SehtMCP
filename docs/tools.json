@@ -1,0 +1,1266 @@
+[
+  {
+    "name": "cell_place",
+    "description": "Place a base object or NPC into an editable Cell. Automatically selects REFR/ACHR and persistent/temporary group. Position uses Skyrim units; rotation uses radians. Base FormKey must resolve. Does not generate navmesh or collision.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "cell": {
+          "type": "string"
+        },
+        "baseFormKey": {
+          "type": "string"
+        },
+        "editorId": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number",
+          "default": 0
+        },
+        "y": {
+          "type": "number",
+          "default": 0
+        },
+        "z": {
+          "type": "number",
+          "default": 0
+        },
+        "rx": {
+          "type": "number",
+          "default": 0
+        },
+        "ry": {
+          "type": "number",
+          "default": 0
+        },
+        "rz": {
+          "type": "number",
+          "default": 0
+        },
+        "scale": {
+          "type": "number",
+          "default": 1
+        },
+        "persistent": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "cell",
+        "baseFormKey",
+        "editorId"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "asset_search",
+    "description": "Search loose assets across configured dataRoots by path substring. Paginates results and reports when the scan limit is reached. Skips symlink directories.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_override",
+    "description": "Copy a master record into the editable plugin, preserving FormKey and source fields. Nested records use Mutagen contexts to preserve parent structure without copying siblings. Optional fields apply in the same transaction.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "formKey": {
+          "type": "string"
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "formKey"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "nif_inspect",
+    "description": "Inspect a Skyrim LE/SE NIF header, block types, textures, and supported geometry. path may be absolute, Data-relative, or a BSA entry with archive specified. Read-only; rejects malformed block tables.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "archive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_open",
+    "description": "Read an existing ESP/ESM/ESL into an editable session, loading its masters. This call never writes the source. Saving is restricted to the configured workspace and requires an explicit overwrite flag for existing output. Localized plugins are currently inspection-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "nif_blocks",
+    "description": "Page through NIF blocks with type, index, byte offset, and size. Does not modify the file.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "archive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "archive_extract",
+    "description": "Extract a single BSA entry to a new workspace-relative output file. Refuses overwrite and path traversal. Asset size is bounded.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "archive": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "archive",
+        "path",
+        "output"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "archive_search",
+    "description": "Search an explicitly selected BSA's file table by substring. No extraction is necessary. limit 1..500.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "archive": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string",
+          "default": ""
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "archive"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "nif_block_bytes",
+    "description": "Read a bounded hex slice of a NIF block for diagnostics. count 1..4096. Blocks are addressed by nif_blocks index.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "block": {
+          "type": "integer"
+        },
+        "archive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "count": {
+          "type": "integer",
+          "default": 256
+        }
+      },
+      "required": [
+        "path",
+        "block"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_checkpoint",
+    "description": "Store a named in-memory checkpoint (maximum 8 per session). Checkpoints are lost when the server exits. Use plugin_save for durable output.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session",
+        "name"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "record_get",
+    "description": "Read typed record data, including loaded masters. Canonical key syntax: 000800:Plugin.esp. Optional field selects a top-level field to inspect large records. depth 1..16, maxItems 1..1000; truncation is marked explicitly.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "formKey": {
+          "type": "string"
+        },
+        "field": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "depth": {
+          "type": "integer",
+          "default": 8
+        },
+        "maxItems": {
+          "type": "integer",
+          "default": 250
+        }
+      },
+      "required": [
+        "session",
+        "formKey"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_diff",
+    "description": "Compare current records with a named checkpoint. Reports added, removed, and changed FormKeys with bounded results. Header metadata is reported separately.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "checkpoint": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "session",
+        "checkpoint"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_update",
+    "description": "Merge fields into an editable record atomically. Arrays replace in full, null clears optional values, and objects recursively merge. Read schema first. FormKey and nested major-record collections cannot be changed here. Create an override before editing a master record.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "formKey": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "formKey",
+        "fields"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "record_history",
+    "description": "Show every loaded version of a record in master load order, followed by the editable override. Useful for conflict review; only loaded masters are included.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "formKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session",
+        "formKey"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_assets",
+    "description": "List explicit asset links attached to a record, with loose-file resolution. Does not infer all runtime assets or assume absent loose files are missing; they may be packed in BSAs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "formKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session",
+        "formKey"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_close",
+    "description": "Close a session and release loaded masters. Unsaved sessions require discard=true.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "discard": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "plugin_list",
+    "description": "List editable sessions, revisions, dirty state, flags, and masters.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_types",
+    "description": "Discover concrete Skyrim major record types. topLevel=true types support standalone creation. Others require parent and slot, except Cell which creates an interior cell. Overrides use source contexts, including nested records.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "cell_create_exterior",
+    "description": "Create an exterior Cell at grid x,y in an editable Worldspace, arranging correct exterior block/subblock groups (including negative coordinates). The worldspace must be created or overridden first. No terrain or navmesh is generated.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "worldspace": {
+          "type": "string"
+        },
+        "editorId": {
+          "type": "string"
+        },
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "worldspace",
+        "editorId",
+        "x",
+        "y"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "plugin_save",
+    "description": "Validate, write a staged binary, re-read it, then atomically save under the workspace. relativePath filename must match plugin ModKey. overwrite=true creates a backup. Refuses unresolved links and incompatible ESL ranges. Never edits load orders or deploys to game Data.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "relativePath": {
+          "type": "string"
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "relativePath"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "record_create",
+    "description": "Create a concrete record from discovered schema. fields is an object; objects merge, arrays replace, null clears. FormLinks use canonical FormKeys. Cell without parent creates an interior cell. Nested records use parent FormKey and slot, e.g. PlacedObject under Cell.Temporary. Returns allocated FormKey and revision.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        },
+        "editorId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "slot": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "type"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "plugin_validate",
+    "description": "Validate duplicate IDs, FormLinks and target types, deleted targets, light FormID range, and output support. Does not prove gameplay correctness or replace xEdit, Creation Kit, or in-game testing.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_references",
+    "description": "List outgoing FormLinks or incoming references for a FormKey, optionally including masters. Paginated to bound response size.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "formKey": {
+          "type": "string"
+        },
+        "incoming": {
+          "type": "boolean",
+          "default": false
+        },
+        "includeMasters": {
+          "type": "boolean",
+          "default": false
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "session",
+        "formKey"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_restore",
+    "description": "Restore a named in-memory checkpoint; increments revision and marks the session dirty. Loaded masters remain available.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "name"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "asset_resolve",
+    "description": "Find all loose-file providers for a relative Data path. dataRoots are low-to-high priority; the last provider wins. Archive lookup is explicit because archive load order differs from loose-file priority.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_search",
+    "description": "Search editable records or winning records including loaded masters by EditorID substring, exact type name, or FormKey substring. Results are paginated; returns current revision. limit 1..500.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string",
+          "default": ""
+        },
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "includeMasters": {
+          "type": "boolean",
+          "default": false
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "nif_preview",
+    "description": "Return a PNG image of embedded Skyrim SE BSTriShape geometry directly to the model. Untextured diagnostic shading, orthographic view, angles in degrees. Applies supported parent transforms. Does not animate, deform skins, or reproduce Bethesda materials. Unsupported geometry is reported; NifSkope provides full viewing.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "archive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "width": {
+          "type": "integer",
+          "default": 640
+        },
+        "height": {
+          "type": "integer",
+          "default": 640
+        },
+        "yaw": {
+          "type": "number",
+          "default": 35
+        },
+        "pitch": {
+          "type": "number",
+          "default": 20
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_package",
+    "description": "Create a new mod ZIP containing the last saved plugin, a Seht manifest, and explicitly selected workspace files. files maps ZIP Data-relative entry names to workspace-relative source paths. Never auto-bundles masters or game assets. Requires a clean saved session. Existing ZIPs are not overwritten.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "files": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      },
+      "required": [
+        "session",
+        "output"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "script_compile",
+    "description": "Run the configured Papyrus compiler on a workspace script. Requires papyrusFlags and papyrusImports configuration. Captures diagnostics, supports cancellation, and times out after 120 seconds. Writes compiled PEX output in workspace/scripts/compiled.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "seht_guide",
+    "description": "Read the authoring workflow, JSON conventions, safety properties, and precise limitations. Recommended before creating the first plugin.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "archive_list",
+    "description": "List BSA files directly under configured dataRoots. Does not assume they are active in the game load order.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "seht_status",
+    "description": "Get SehtMCP configuration, installed tool versions, supported capabilities, and open sessions. Start here.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "mo2_profile_inspect",
+    "description": "Read an MO2 profile's modlist.txt and plugins.txt without changing them. Returns enabled mod roots in low-to-high asset priority for config.dataRoots, plus active plugin order. It does not activate a virtual filesystem or infer archive priority.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileDirectory": {
+          "type": "string"
+        },
+        "modsDirectory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileDirectory",
+        "modsDirectory"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "record_schema",
+    "description": "Inspect a Mutagen Skyrim type's fields, enum names, collection element types, and polymorphic variants. Use $type for abstract fields. depth 0..3. Names such as Weapon, Npc, Quest, WeaponData, Effect, ScriptEntry.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_add_masters",
+    "description": "Add master filenames in load order, resolving transitive dependencies. Supply the current expectedRevision. Added masters are preserved at save even if not yet referenced.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "masters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "masters"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "record_duplicate",
+    "description": "Duplicate a leaf record with a new FormKey and unique EditorID, preserving source fields and parent placement. Links still point to original targets. Subtree duplication is refused because it needs an explicit child FormKey remapping plan. Optional fields apply atomically.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "formKey": {
+          "type": "string"
+        },
+        "editorId": {
+          "type": "string"
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "formKey",
+        "editorId"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "script_write",
+    "description": "Write a Papyrus source script under workspace/scripts/source. Scriptname must match name. Existing sources require overwrite=true and receive a backup.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "name",
+        "source"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "record_remove",
+    "description": "Remove a record from the editable plugin (removing an override restores master behavior). Refuses if other editable records reference it or it owns children. Does not mark the master record deleted.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "formKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "formKey"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": true
+    }
+  },
+  {
+    "name": "editor_status",
+    "description": "Inspect configured Creation Kit, NifSkope, and Papyrus executables plus running CK process status. Does not access editor memory.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "plugin_batch",
+    "description": "Apply up to 200 record operations atomically. Each object has op=create|update|override|duplicate|remove, plus type/editorId/fields/formKey/parent/slot as applicable. A create may set alias; later formKey, parent, or link strings may use $alias. All changes roll back on any failure. dryRun returns predicted results without committing.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "operations": {
+          "type": "array"
+        },
+        "dryRun": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision",
+        "operations"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "nif_export_obj",
+    "description": "Export supported embedded SSE geometry to a new workspace-relative OBJ for external viewers. Applies supported parent transforms. No materials, UVs, bones, or animation are exported. Source NIF is unchanged.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "archive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "path",
+        "output"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "plugin_metadata",
+    "description": "Set author, description, or light flag transactionally. ESL capacity is validated without renumbering FormIDs. Null values leave fields unchanged.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        },
+        "expectedRevision": {
+          "type": "integer"
+        },
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "light": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session",
+        "expectedRevision"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "editor_launch",
+    "description": "Open the configured Windows application: creation-kit or nifskope. Optional file is an existing NIF for NifSkope. CK opens normally; this tool does not load plugins, edit UI state, or guarantee MO2 VFS access.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "application": {
+          "type": "string"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "application"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "plugin_create",
+    "description": "Create an editable Skyrim SE plugin session: kind esp, esm, esl, or esp-fe (ESL-flagged ESP). Filename extension must match. Masters are filenames in configured dataRoots; dependencies load recursively. Nothing is written until plugin_save.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "default": "esp"
+        },
+        "author": {
+          "type": "string",
+          "default": ""
+        },
+        "description": {
+          "type": "string",
+          "default": ""
+        },
+        "masters": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      },
+      "required": [
+        "filename"
+      ]
+    },
+    "annotations": {
+      "destructiveHint": false
+    }
+  },
+  {
+    "name": "plugin_manifest",
+    "description": "Summarize an editable plugin's dependencies, record counts by type, explicit asset paths, saved hash, and validation. Suitable for reviewing a build before packaging.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  }
+]

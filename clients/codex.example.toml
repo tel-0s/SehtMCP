@@ -1,0 +1,5 @@
+[mcp_servers.SehtMCP]
+command = 'D:\Modding\Skyrim Projects\SehtMCP\artifacts\publish\win-x64\SehtMcp.exe'
+args = ['--config', 'D:\Modding\Skyrim Projects\SehtMCP\seht.local.json']
+startup_timeout_sec = 30
+tool_timeout_sec = 180

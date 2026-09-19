@@ -1,0 +1,21 @@
+[
+  {
+    "op":"create","type":"Quest","editorId":"SehtQuest","alias":"quest",
+    "fields":{"Name":"Seht Quest","Priority":50,"Stages":[{"Index":10},{"Index":20}],"Objectives":[{"Index":10,"DisplayText":"Find the item"}]}
+  },
+  {"op":"create","type":"MagicEffect","editorId":"SehtEffect","alias":"effect","fields":{"Name":"Seht Effect"}},
+  {
+    "op":"create","type":"Spell","editorId":"SehtSpell",
+    "fields": {
+      "Name":"Seht Spell",
+      "Effects":[{
+        "BaseEffect":"$effect",
+        "Data":{"Magnitude":5,"Area":0,"Duration":10},
+        "Conditions":[{
+          "$type":"ConditionFloat","ComparisonValue":10,"CompareOperator":"GreaterThanOrEqualTo",
+          "Data":{"$type":"GetStageConditionData","Quest":"$quest"}
+        }]
+      }]
+    }
+  }
+]

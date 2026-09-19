@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "SehtMCP": {
+      "type": "stdio",
+      "command": "D:\\Modding\\Skyrim Projects\\SehtMCP\\artifacts\\publish\\win-x64\\SehtMcp.exe",
+      "args": ["--config", "D:\\Modding\\Skyrim Projects\\SehtMCP\\seht.local.json"]
+    }
+  }
+}
