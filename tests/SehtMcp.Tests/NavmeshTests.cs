@@ -251,7 +251,7 @@ public sealed class NavmeshTests : IDisposable
     }
 
     [Fact]
-    public void ExteriorAndInheritedCellsAreRejectedWithoutAddingNavmeshes()
+    public void OrphanExteriorAndInheritedCellsAreRejectedWithoutAddingNavmeshes()
     {
         var source = Session("Source.esm", "esm"); var key = Cell(source).FormKey.ToString();
         workspace.Save(source.Id, 1, "Source.esm", false);

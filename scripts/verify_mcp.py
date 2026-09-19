@@ -113,6 +113,41 @@ def main():
         (output / "navmesh-preview.png").write_bytes(base64.b64decode(next(c["data"] for c in nav_preview["content"] if c["type"] == "image")))
         (output / "navmesh-report.json").write_text(json.dumps({"baked":baked, "saved":nav_saved}, indent=2))
         print("Baked, inspected, previewed, validated, saved, and reopened interior NAVM/NAVI", flush=True)
+        exterior_session = call("plugin_create", filename="SehtExteriorSmoke.esp", kind="esp")["session"]
+        exterior_revision = 0
+
+        def edit_exterior(name, **arguments):
+            nonlocal exterior_revision
+            result = call(name, session=exterior_session, expectedRevision=exterior_revision, **arguments)
+            exterior_revision = result["revision"]
+            return result["result"]
+
+        exterior_world = edit_exterior("record_create", type="Worldspace", editorId="SehtIslandWorld", fields={"Flags":"SmallWorld"})["formKey"]
+        exterior_cell = edit_exterior("cell_create_exterior", worldspace=exterior_world, editorId="SehtIsland", x=-2, y=3)["formKey"]
+        exterior_room = edit_exterior("record_create", type="Cell", editorId="SehtIslandRoom", fields={})["formKey"]
+        door_base = edit_exterior("record_create", type="Door", editorId="SehtDoorBase", fields={})["formKey"]
+        outside_door = edit_exterior("cell_place", cell=exterior_cell, baseFormKey=door_base, editorId="SehtOutsideDoor", x=-6144,y=14336,z=0,persistent=True)["formKey"]
+        inside_door = edit_exterior("cell_place", cell=exterior_room, baseFormKey=door_base, editorId="SehtInsideDoor",persistent=True)["formKey"]
+        edit_exterior("record_update", formKey=outside_door, fields={"TeleportDestination":{"Door":inside_door,"Position":{"X":0,"Y":0,"Z":0}}})
+        edit_exterior("record_update", formKey=inside_door, fields={"TeleportDestination":{"Door":outside_door,"Position":{"X":-6144,"Y":14336,"Z":0}}})
+        exterior_geometry = {"vertices":[[v[0]-6144,v[1]+14336,v[2]] for v in geometry["vertices"]],"triangles":geometry["triangles"]}
+        exterior_bake = edit_exterior("navmesh_generate", cell=exterior_cell, **exterior_geometry)
+        exterior_nav = exterior_bake["components"][0]["formKey"]
+        interior_bake = edit_exterior("navmesh_generate", cell=exterior_room, **geometry)
+        interior_nav = interior_bake["components"][0]["formKey"]
+        outside_link = edit_exterior("navmesh_link_door", navmesh=exterior_nav, door=outside_door, triangle=0)
+        inside_link = edit_exterior("navmesh_link_door", navmesh=interior_nav, door=inside_door, triangle=0)
+        assert outside_link["reciprocalTeleport"] and inside_link["reciprocalTeleport"]
+        exterior_info = call("navmesh_get", session=exterior_session, navmesh=exterior_nav)
+        assert exterior_info["parent"]["Parent"] == exterior_world, exterior_info
+        assert [exterior_info["parent"]["Coordinates"][axis] for axis in ("X","Y")] == [3,-2], exterior_info
+        assert call("plugin_validate", session=exterior_session)["valid"]
+        exterior_saved = call("plugin_save", session=exterior_session, expectedRevision=exterior_revision, relativePath="SehtExteriorSmoke.esp")
+        exterior_reopened = call("plugin_open",path=exterior_saved["path"])["session"]
+        assert call("plugin_validate",session=exterior_reopened)["valid"]
+        assert len(call("navmesh_get",session=exterior_reopened,navmesh=exterior_nav)["doorLinks"]) == 1
+        (output / "navmesh-exterior.json").write_text(json.dumps({"baked":exterior_bake,"outsideDoor":outside_link,"insideDoor":inside_link,"saved":exterior_saved},indent=2))
+        print("Baked and reopened isolated exterior NAVM/NAVI with reciprocal exterior/interior door links",flush=True)
         if options.local:
             source = str(Path(config["gameDirectory"]) / "Data" / "Skyrim - Meshes0.bsa")
             meshes = call("archive_search", archive=source, query="longsword.nif", limit=5)
@@ -140,6 +175,14 @@ def main():
             assert not scene_preview.get("isError"), scene_preview
             (output / "navmesh-scene.png").write_bytes(base64.b64decode(next(c["data"] for c in scene_preview["content"] if c["type"] == "image")))
             print("Baked navmesh from a transformed vanilla Dwemer floor NIF read from BSA", flush=True)
+            scene_world = call("record_create",session=scene_session,expectedRevision=3,type="Worldspace",editorId="SehtBsaWorld",fields={"Flags":"SmallWorld"})["result"]["formKey"]
+            scene_exterior = call("cell_create_exterior",session=scene_session,expectedRevision=4,worldspace=scene_world,editorId="SehtBsaExterior",x=0,y=0)["result"]["formKey"]
+            call("cell_place",session=scene_session,expectedRevision=5,cell=scene_exterior,baseFormKey="04EFCF:Skyrim.esm",editorId="SehtOutsideFloor",x=2048,y=2048,z=64,rz=1.57079632679,persistent=True)
+            outside_scene = call("navmesh_generate_from_cell",session=scene_session,expectedRevision=6,cell=scene_exterior,archives=archives)
+            assert call("plugin_validate",session=scene_session)["valid"]
+            call("plugin_save",session=scene_session,expectedRevision=7,relativePath="SehtNavScene.esp",overwrite=True)
+            (output / "navmesh-exterior-bsa.json").write_text(json.dumps(outside_scene,indent=2))
+            print("Baked isolated exterior navigation from a worldspace-persistent vanilla BSA floor",flush=True)
             call("script_write", name="SehtSmoke", source="Scriptname SehtSmoke\n\nInt Function Add(Int a, Int b) Global\n  Return a + b\nEndFunction\n")
             compilation = call("script_compile", name="SehtSmoke")
             assert compilation["success"], compilation

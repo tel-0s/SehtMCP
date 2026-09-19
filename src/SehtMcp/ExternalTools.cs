@@ -8,7 +8,7 @@ public sealed class ExternalTools(SehtConfig config)
     public object Status() => new
     {
         creationKit = Describe(config.CreationKit), nifSkope = Describe(config.NifSkope), papyrusCompiler = Describe(config.PapyrusCompiler),
-        liveEditorBridge = false, note = "This release authors plugin files with Mutagen and generates new-interior NAVM/NAVI with Recast or explicit triangles. CK launch/status is available; live editor operations, Havok collision extraction, exterior navmesh finalization, FaceGen, and lip generation require further integration."
+        liveEditorBridge = false, note = "This release authors plugin files with Mutagen and generates new interior and isolated exterior NAVM/NAVI with Recast or explicit triangles. CK launch/status is available; live editor operations, Havok collision extraction, cross-cell navmesh stitching/finalization, FaceGen, and lip generation require further integration."
     };
     private static object Describe(string? path) => new { path, available = path is not null && File.Exists(path), version = path is not null && File.Exists(path) ? FileVersionInfo.GetVersionInfo(path).FileVersion : null };
     public object Launch(string application, string? file)

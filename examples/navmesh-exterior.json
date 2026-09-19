@@ -1,0 +1,9 @@
+{
+  "session": "YOUR_SESSION",
+  "expectedRevision": 2,
+  "cell": "000801:YourIsland.esp",
+  "vertices": [[1024,1024,128],[3072,1024,128],[3072,3072,128],[1024,3072,128]],
+  "triangles": [[0,1,2],[0,2,3]],
+  "walkableSeeds": [[2048,2048,128]],
+  "dryRun": true
+}

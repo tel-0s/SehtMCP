@@ -15,9 +15,9 @@ public static class NavmeshRecords
 
     public static object Write(PluginSession session, string cellKey, NavmeshGeometry geometry, bool replaceExisting)
     {
-        var cell = PluginWorkspace.Find(session, cellKey) as Cell ?? throw new ArgumentException("Expected an editable interior Cell.");
-        if (!cell.Flags.HasFlag(Cell.Flag.IsInteriorCell) || cell.FormKey.ModKey != session.Mod.ModKey)
-            throw new ArgumentException("Generation currently supports new interior cells owned by this plugin. Existing master cells and exterior stitching require CK finalization.");
+        var context = NavmeshCell.Resolve(session, cellKey);
+        var cell = context.Cell;
+        context.CheckBounds(geometry.Vertices);
         var parts = geometry.Normalize().Components();
         if (cell.NavigationMeshes.Count > 0)
         {
@@ -45,7 +45,7 @@ public static class NavmeshRecords
             NavigationMesh nav;
             if (replaceExisting && cell.NavigationMeshes.Count == parts.Length) nav = cell.NavigationMeshes[i];
             else { nav = new NavigationMesh(session.Mod.GetNextFormKey(), SkyrimRelease.SkyrimSE); cell.NavigationMeshes.Add(nav); }
-            nav.Data = Data(cell.FormKey, part);
+            nav.Data = Data(context.Parent(), part);
             nav.IsCompressed = true;
             // Explicitly rebuild derived NAVI information for this mesh, preserving other cells.
             foreach (var otherMap in session.Mod.NavigationMeshInfoMaps)
@@ -55,18 +55,18 @@ public static class NavmeshRecords
             results.Add(new { formKey = nav.FormKey.ToString(), vertices = part.Vertices.Length, triangles = part.Triangles.Length,
                 boundaryEdges = part.Adjacency().Sum(t => t.Count(n => n < 0)), bounds = new { min = Coordinates(nav.Data.Min), max = Coordinates(nav.Data.Max) } });
         }
-        return new { cell = cellKey, navmeshInfoMap = map.FormKey.ToString(), components = results, warnings = new[] {
+        return new { cell = cellKey, worldspace = context.World?.FormKey.ToString(), grid = cell.Grid is null ? null : new[] { cell.Grid.Point.X, cell.Grid.Point.Y }, navmeshInfoMap = map.FormKey.ToString(), components = results, warnings = new[] {
             "Generated from supplied geometry. Inspect the result against collision and test actor pathing in game.",
             "Teleport-door links are explicit: use navmesh_link_door for each endpoint. Cover and exterior edge links are not generated."
         } };
     }
 
-    public static NavigationMeshData Data(FormKey cell, NavmeshGeometry geometry)
+    public static NavigationMeshData Data(ANavmeshParent parent, NavmeshGeometry geometry)
     {
         var neighbors = geometry.Adjacency();
         var min = geometry.Vertices.Aggregate(Vector3.Min); var max = geometry.Vertices.Aggregate(Vector3.Max);
         var data = new NavigationMeshData { NavmeshVersion = 12, CrcHash = PathingCell,
-            Parent = new CellNavmeshParent { Parent = cell.ToLink<ICellGetter>() },
+            Parent = parent,
             Min = Point(min), Max = Point(max), NavmeshGridDivisor = 1,
             MaxDistanceX = max.X - min.X, MaxDistanceY = max.Y - min.Y };
         data.Vertices.AddRange(geometry.Vertices.Select(Point));
@@ -77,7 +77,7 @@ public static class NavmeshRecords
                 EdgeLink_0_1 = checked((short)n[0]), EdgeLink_1_2 = checked((short)n[1]), EdgeLink_2_0 = checked((short)n[2]) });
         }
         // NVNM's divisor^2 cells each store a uint32 count followed by int16 triangle indices.
-        // One exhaustive bucket is valid for interiors and avoids approximating triangle/grid intersections.
+        // One exhaustive bucket avoids approximating triangle/grid intersections.
         using var bytes = new MemoryStream();
         using (var writer = new BinaryWriter(bytes, System.Text.Encoding.UTF8, true))
         {
@@ -91,10 +91,15 @@ public static class NavmeshRecords
     public static NavigationMapInfo Info(INavigationMeshGetter nav)
     {
         var data = nav.Data ?? throw new ArgumentException("Navmesh has no geometry.");
-        var parent = data.Parent as ICellNavmeshParentGetter ?? throw new ArgumentException("Expected an interior navmesh.");
+        ANavigationMapInfoParent parent = data.Parent switch
+        {
+            ICellNavmeshParentGetter p => new NavigationMapInfoCellParent { ParentCell = p.Parent.FormKey.ToLink<ICellGetter>() },
+            IWorldspaceNavmeshParentGetter p => new NavigationMapInfoWorldParent { ParentWorldspace = p.Parent.FormKey.ToLink<IWorldspaceGetter>(), ParentWorldspaceCoord = p.Coordinates },
+            _ => throw new ArgumentException("NAVM must have a cell or worldspace parent.")
+        };
         var center = data.Vertices.Aggregate(Vector3.Zero, (total, v) => total + Point(v)) / data.Vertices.Count;
         var info = new NavigationMapInfo { NavigationMesh = nav.FormKey.ToLink<INavigationMeshGetter>(), Point = Point(center),
-            Unknown2 = unchecked((int)PathingCell), Parent = new NavigationMapInfoCellParent { ParentCell = parent.Parent.FormKey.ToLink<ICellGetter>() } };
+            Unknown2 = unchecked((int)PathingCell), Parent = parent };
         info.MergedTo.AddRange(data.EdgeLinks.Select(e => e.Mesh.FormKey).Distinct().Select(f => f.ToLink<INavigationMeshGetter>()));
         info.LinkedDoors.AddRange(data.DoorTriangles.Select(d => new LinkedDoor { Door = d.Door.FormKey.ToLink<IPlacedObjectGetter>(), Unknown = PathingDoor }));
         if (data.EdgeLinks.Count == 0 && data.DoorTriangles.Count == 0)
@@ -153,6 +158,24 @@ public static class NavmeshRecords
                         var cell = PluginWorkspace.Find(session, parent.Parent.FormKey.ToString(), true) as ICellGetter;
                         if (cell is null || !cell.Flags.HasFlag(Cell.Flag.IsInteriorCell) || !cell.NavigationMeshes.Any(n => n.FormKey == nav.FormKey)) Error("parent", "Interior NAVM parent does not match its owning cell.");
                     }
+                    else if (data.Parent is IWorldspaceNavmeshParentGetter exterior)
+                    {
+                        var world = PluginWorkspace.Find(session, exterior.Parent.FormKey.ToString(), true) as IWorldspaceGetter;
+                        var cells = world?.SubCells.SelectMany(b => b.Items).SelectMany(b => b.Items)
+                            .Where(c => c.Grid?.Point == new P2Int(exterior.Coordinates.Y, exterior.Coordinates.X)).ToArray() ?? [];
+                        if (cells.Length != 1 || cells[0].Flags.HasFlag(Cell.Flag.IsInteriorCell) || !cells[0].NavigationMeshes.Any(n => n.FormKey == nav.FormKey))
+                            Error("parent", "Exterior NAVM worldspace/grid does not match its owning cell (serialized coordinates are Y,X).");
+                        foreach (var door in data.DoorTriangles)
+                        {
+                            var reference = world?.TopCell?.Persistent.OfType<IPlacedObjectGetter>().FirstOrDefault(r => r.FormKey == door.Door.FormKey);
+                            var position = reference?.Placement?.Position;
+                            if (reference is null || reference.IsDeleted || (reference.MajorRecordFlagsRaw & 0x400) == 0 || position is null ||
+                                !float.IsFinite(position.Value.X) || !float.IsFinite(position.Value.Y) ||
+                                MathF.Floor(position.Value.X / 4096) != exterior.Coordinates.Y || MathF.Floor(position.Value.Y / 4096) != exterior.Coordinates.X)
+                                Error("door", "Exterior door link must resolve to a persistent door in this worldspace, positioned in the NAVM grid cell.");
+                        }
+                    }
+                    else Error("parent", "NAVM has no supported parent.");
                     if (data.NavmeshGridDivisor is < 1 or > 256) Error("grid", "Navmesh grid divisor must be 1..256.");
                     else
                     {
@@ -179,6 +202,7 @@ public static class NavmeshRecords
                         var info = infos[0];
                         if (info.Unknown2 != unchecked((int)PathingCell)) Error("navi", "NAVI entry has an invalid PathingCell CRC.");
                         if (data.Parent is ICellNavmeshParentGetter p && (info.Parent is not INavigationMapInfoCellParentGetter ip || ip.ParentCell.FormKey != p.Parent.FormKey)) Error("navi", "NAVI parent differs from NAVM parent.");
+                        if (data.Parent is IWorldspaceNavmeshParentGetter wp && (info.Parent is not INavigationMapInfoWorldParentGetter wi || wi.ParentWorldspace.FormKey != wp.Parent.FormKey || wi.ParentWorldspaceCoord != wp.Coordinates)) Error("navi", "NAVI worldspace/grid differs from NAVM parent.");
                         if (!info.LinkedDoors.Select(d => d.Door.FormKey).ToHashSet().SetEquals(data.DoorTriangles.Select(d => d.Door.FormKey))) Error("navi", "NAVI door links differ from NAVM door links.");
                         if (info.LinkedDoors.Any(d => d.Unknown != PathingDoor)) Error("navi", "NAVI door link has an invalid PathingDoor CRC.");
                         if (info.Island is { } island && (!island.Vertices.SequenceEqual(data.Vertices) || !island.Triangles.SequenceEqual(data.Triangles.Select(t => t.Vertices)) || island.Min != data.Min || island.Max != data.Max))

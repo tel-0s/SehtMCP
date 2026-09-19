@@ -1,16 +1,16 @@
-# Interior navmesh workflow
+# Interior and isolated exterior navmesh workflow
 
-Available in SehtMCP **0.2.0**. Call `seht_status` to confirm the running version; an existing 0.1.0 process will keep its old tools until restarted. Save its open plugins first, then open them in a new server session.
+Available in SehtMCP **0.3.0**. Call `seht_status` to confirm the running version; an older server process will keep its old tools until restarted. Save its open plugins first, then open them in a new server session.
 
 ## Choose the geometry source
 
 | Tool | Input | Behavior |
 | --- | --- | --- |
-| `navmesh_generate_from_cell` | An editable new interior Cell, optional reference selection, explicit BSA paths | Collects supported placed NIF render geometry and bakes it with Recast |
+| `navmesh_generate_from_cell` | An editable new interior or isolated exterior Cell, optional reference selection, explicit BSA paths | Collects supported placed NIF render geometry and bakes it with Recast |
 | `navmesh_generate` | Scene vertices and triangles in cell coordinates | Bakes walkability, height clearance, radius, slopes and climb with Recast |
 | `navmesh_create` | Already authored walkable vertices and triangles | Builds NAVM/NAVI and topology directly; does not calculate actor clearance |
 
-Generation supports new interior cells owned by the editable plugin. Use a full ESP or ESM for interiors that other mods may override. ESL and ESP-FE output is supported within the conservative FormID range, with the existing warning about new light-plugin cells.
+Generation supports new interior cells and isolated exterior grid cells owned by the editable plugin. Exterior worlds must also be new and have no parent worldspace. Use a full ESP or ESM for interiors that other mods may override. ESL and ESP-FE output is supported within the conservative FormID range, with the existing warning about new light-plugin cells.
 
 All coordinates use Skyrim units with **Z up**. Triangle indices start at zero. Recast treats upward-facing floor triangles as potentially walkable; include walls, ceilings and obstacles, not just the floor. Direct authoring normalizes triangle winding upward and welds identical vertex positions.
 
@@ -52,13 +52,27 @@ After a successful dry run, repeat with `dryRun: false` and the same revision. S
 
 For hand-authored planar surfaces, [navmesh-room.json](../examples/navmesh-room.json) supplies a small `navmesh_create` example. This is a floor definition, not a complete furnished-cell collision plan.
 
+## Isolated exterior cells (0.3.0)
+
+The existing tools accept new exterior grid cells, including cells in a `SmallWorld` worldspace. Create the Worldspace with `record_create`, then the cell with `cell_create_exterior`. The worldspace and cell must belong to the editable plugin, and the worldspace must have no parent worldspace. This supports a self-contained kit or island reached through teleport doors.
+
+**Exterior geometry, reference positions, seeds and teleport markers use world-space coordinates.** Grid `(x,y)` covers X `[x*4096,(x+1)*4096)` and Y `[y*4096,(y+1)*4096)`. For cell `(0,0)`, center the kit around `(2048,2048)` and keep navigation within X/Y `0..4096` (upper edge excluded). A kit centered at `(0,0)` with negative coordinates crosses cell boundaries. Move that kit or finalize its cross-cell navigation in CK. Generation rejects output outside the target cell; it does not silently crop geometry, create neighbors, or fabricate edge connections. Keep a margin around the kit.
+
+Use the same dry-run/generate/preview/validate/save sequence as interiors. [navmesh-exterior.json](../examples/navmesh-exterior.json) supplies explicit scene geometry for a raised square in cell `(0,0)`. The bake result reports the owning worldspace and grid in normal `[x,y]` order. Raw parent fields from `navmesh_get` follow the binary format's **Y,X** order; Mutagen exposes these as `Coordinates.X` and `Coordinates.Y` respectively.
+
+The NIF collector includes target-cell references plus worldspace persistent references whose placement origin is in the cell. It cannot extract LAND or Havok terrain/collision. A cell with LAND fails collection explicitly; supply complete terrain/collision proxies to `navmesh_generate`. The collector does not discover objects anchored in neighboring cells that overhang the target; a kit requiring those surfaces needs explicit complete input geometry.
+
+Create exterior doors with `cell_place`, `persistent: true`, and a position inside the target grid cell. The helper creates/uses the world's persistent cell. For older workflows using `record_create` under the grid cell's `Persistent` slot, `navmesh_link_door` moves that door to the world persistent cell atomically while preserving its FormKey. Doors in another grid cell/world are refused. The link result includes `persistentCell`; the door will no longer appear in the grid cell's persistent collection after relocation. Set reciprocal teleport destinations before linking each endpoint.
+
+Cross-cell edge stitching, parent-world inheritance, inherited navmesh editing and CK finalization remain outside this workflow. Structural success does not replace a follower/pathfinding test in game.
+
 ## Door links
 
 `navmesh_nearest` locates a triangle near a point and returns its NAVM FormKey, triangle index, snapped position and distance. For a local door's arrival marker, inspect the **other door's** `TeleportDestination.Position`: that position is expressed in the local destination cell.
 
 Call `navmesh_link_door` with `session`, `expectedRevision`, `navmesh`, `door` (the local persistent door REFR), and `triangle`. It writes the NAVM door association/flag and matching NAVI information. The door must have a valid Door base and a teleport destination pointing to another placed Door. The result reports whether teleport references are reciprocal.
 
-Both endpoints need their own valid navigation associations for NPC travel. This tool does not change teleport destinations, validate marker placement against collision, or finalize an exterior endpoint. Reusing an already-linked door is refused. Complete layout changes before linking doors, and test follower traversal through both directions in game.
+Both endpoints need their own valid navigation associations for NPC travel. This tool does not change teleport destinations, validate marker placement against collision, or stitch exterior cell boundaries. Reusing an already-linked door is refused. Complete layout changes before linking doors, and test follower traversal through both directions in game.
 
 ## Regeneration and validation
 
@@ -66,7 +80,7 @@ All mutations are atomic and revision-checked. `dryRun` allocates no durable rec
 
 For an unlinked generated cell, `replaceExisting: true` rebuilds NAVM data while preserving FormKeys. Rebuilds that change the number of connected components, affect inherited NAVMs, or invalidate door/external-edge links are refused. Restore the checkpoint before first generation if you need to change the mesh's component structure. Never renumber published navmeshes to work around these checks.
 
-Each connected component becomes one NAVM with reciprocal triangle adjacency, interior parent information, bounds and a complete spatial lookup. A local NAVI indexes the meshes and records isolated-region geometry or door links. The current lookup uses one exhaustive grid bucket; this is conservative and may be less efficient for very large interiors than CK's finer grid.
+Each connected component becomes one NAVM with reciprocal triangle adjacency, interior parent links or exterior worldspace/grid information, bounds and a complete spatial lookup. A local NAVI indexes the meshes and records isolated-region geometry or door links. The current lookup uses one exhaustive grid bucket; this is conservative and may be less efficient for very large cells than CK's finer grid.
 
 Output uses Recast's shared triangular polygon topology. It omits optional per-polygon detail triangulation, which produced overlapping edges on a real interior regression case. Heights are quantized to `cellHeight` and triangle interiors approximate the surface; inspect stairs, ramps and uneven floors against collision.
 

@@ -4,7 +4,7 @@
 
 SehtMCP is a local stdio MCP server written in C#/.NET 10. It creates and edits ESPs, ESMs, standalone ESLs, and ESL-flagged ESPs using [Mutagen](https://mutagen-modding.github.io/Mutagen/). Models discover the installed Skyrim record definitions through tools instead of guessing binary layouts. Asset tools read BSAs, inspect NIFs, and return mesh previews as MCP images.
 
-This is a working **0.2.0 developer release**, with tests and an installed-game smoke test. It is not a complete automation layer for every Creation Kit operation. New interior cells support Recast navmesh generation, NAVM/NAVI output, and explicit teleport-door links. CK integration includes executable detection, launch/status, plugin output, and the installed Papyrus compiler. Live CK editing, exterior navmesh finalization, FaceGen, landscape sculpting, and lip generation remain future work.
+This is a working **0.3.0 developer release**, with tests and an installed-game smoke test. It is not a complete automation layer for every Creation Kit operation. New interior and isolated exterior cells support Recast navmesh generation, NAVM/NAVI output, and explicit teleport-door links. CK integration includes executable detection, launch/status, plugin output, and the installed Papyrus compiler. Live CK editing, cross-cell navmesh stitching/finalization, FaceGen, landscape sculpting, and lip generation remain future work.
 
 ## What works
 
@@ -15,18 +15,18 @@ This is a working **0.2.0 developer release**, with tests and an installed-game 
 | Editing | Create, merge fields, override with parent contexts, duplicate leaf records, remove, search, references, history |
 | Transactions | Optimistic revisions, atomic batches with aliases, dry runs, checkpoints, restore, diff |
 | World records | Interior cells, exterior cells with correct positive/negative grid grouping, REFR/ACHR placement |
-| Interior navmesh | Recast baking from supplied triangles or placed NIF render geometry; NAVM/NAVI, adjacency/grid, reachable-region seeds, door links, PNG preview |
+| Interior / isolated exterior navmesh | Recast baking from supplied triangles or placed NIF render geometry; NAVM/NAVI, adjacency/grid, reachable-region seeds, door links, PNG preview |
 | Complex records | Typed NPC data, script attachments, quests, stages, objectives, conditions, magic effects, spell effects, crafting data |
 | Validation | Identity, link resolution/type, deleted links, ESL bounds, full binary re-import before save |
 | Output | Workspace-only writes, staged saves, replacement backups, hashes, manifest, mod ZIP packaging |
 | Assets | Loose-file providers, BSA inventory/search/extraction, explicit asset links, MO2 profile inspection |
-| NIF | Skyrim 20.2.0.7 headers/blocks, texture sets, embedded SSE geometry, PNG preview, diagnostic OBJ export |
+| NIF | Skyrim 20.3.0.7 headers/blocks, texture sets, embedded SSE geometry, PNG preview, diagnostic OBJ export |
 | External tools | CK/NifSkope launch and CK status; Papyrus source writing and compiler diagnostics |
 | MCP | Official C# SDK; 52 tools, resource, prompt, structured results, image content, tool annotations |
 
 See the [tool catalog](docs/TOOLS.md), [verification report](docs/VALIDATION.md), and [support and limitations](docs/SUPPORT.md). Discoverability of a record type does not imply that all field combinations produce a playable object. Generated definitions are much broader than the set of combinations tested here.
 
-For a new interior, start with the [navmesh workflow](docs/NAVMESH.md). `navmesh_generate_from_cell` collects enabled static geometry; `navmesh_generate` accepts explicit scene/collision proxies; `navmesh_create` accepts manually authored walkable triangles. Render geometry may differ from Havok collision, so inspect the generated mesh and test actors in game.
+For a new interior or isolated exterior, start with the [navmesh workflow](docs/NAVMESH.md). `navmesh_generate_from_cell` collects enabled static geometry; `navmesh_generate` accepts explicit scene/collision proxies; `navmesh_create` accepts manually authored walkable triangles. Render geometry may differ from Havok collision, so inspect the generated mesh and test actors in game.
 
 ## Build
 
@@ -41,7 +41,7 @@ python scripts/verify_mcp.py
 
 The build script tests and publishes a **self-contained Windows x64** application to `artifacts/publish/win-x64/SehtMcp.exe`. Keep the entire publish directory together. End users of that build do not need a .NET runtime. Do not enable trimming or NativeAOT: the record bridge and SDK discovery use reflection.
 
-When an older executable is in use, publish separately with `./scripts/build.ps1 -OutputDirectory 'D:\Modding\Skyrim Projects\SehtMCP\artifacts\publish\0.2.0\win-x64'`, then point new client sessions at that executable. Save open plugin sessions before restarting them; their unsaved changes exist only in the running server process.
+When an older executable is in use, publish separately with `./scripts/build.ps1 -OutputDirectory 'D:\Modding\Skyrim Projects\SehtMCP\artifacts\publish\0.3.0\win-x64'`, then point new client sessions at that executable. Save open plugin sessions before restarting them; their unsaved changes exist only in the running server process.
 
 `python scripts/package_release.py` packages the publish directory and Git-visible source into separate ZIPs under `artifacts/`, with SHA-256 checksums. It does not upload or publish anything. Distribute the corresponding source and dependency notices alongside binaries.
 

@@ -1,4 +1,4 @@
-# Support matrix: 0.2.0
+# Support matrix: 0.3.0
 
 This file distinguishes implemented behavior from future integration work.
 
@@ -14,8 +14,8 @@ This file distinguishes implemented behavior from future integration work.
 | Interior cells | Implemented with interior block/subblock hierarchy |
 | Interior navmesh | Recast baking from explicit triangles or supported placed NIF render geometry; direct triangle authoring; new-cell NAVM/NAVI, adjacency/grid/islands, seeds and explicit teleport-door links; does not extract Havok collision |
 | Navmesh review | Paginated topology, nearest triangle queries, PNG previews, structural validation; no in-game pathfinding or CK finalization test |
-| Exterior cells | Implemented with grid grouping; negative coordinates tested; no terrain/navmesh synthesis |
-| Placed references | REFR/ACHR, transforms, scale, persistent/temporary collection; advanced worldspace persistent-reference semantics still require CK review |
+| Exterior cells | Grid grouping with negative coordinates; isolated new-cell NAVM/NAVI generation in new parentless worlds; no terrain synthesis or cross-cell stitching |
+| Placed references | REFR/ACHR, transforms, scale, persistent/temporary collection; exterior persistent placements use the worldspace persistent cell |
 | Nested overrides | Mutagen source contexts preserve parents; regression test ensures siblings are not copied |
 | Duplication | Top-level and nested leaf records; copying records with child major records is refused |
 | ESL range | Conservative 0x800..0xFFF, maximum 2048 new forms; no automatic compaction or expanded AE range |

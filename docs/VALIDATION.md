@@ -1,5 +1,15 @@
 # Local verification — 2026-09-19
 
+## 0.3.0 isolated exterior navigation release
+
+Release build and **56 tests passed**, including ten new exterior cases. They cover ESP/ESM/ESL/ESP-FE binary round-trips, independent decoding of NAVM/NAVI worldspace FormIDs and signed Y/X grid coordinates, negative grid positions, dry runs and identity-preserving rebuilds, exterior/interior door links, legacy persistent-door relocation, persistent NIF geometry, wrong-cell rejection, malformed parents and missing terrain input.
+
+The separately published `artifacts/publish/0.3.0/win-x64/SehtMcp.exe` passed the complete installed-game MCP check: **52 tools**, 133 record types, an isolated exterior/interior teleport pair saved/reopened with synchronized NAVI links, and exterior baking from a worldspace-persistent vanilla Dwemer floor read from BSA. Interior generation, NIF preview, plugin packaging and installed Papyrus compilation also passed. Artifacts: `artifacts/smoke-1789853867234020600/`.
+
+Vanilla Skyrim.esm exterior NAVMs were inspected read-only to verify their worldspace parent, raw Grid Y/Grid X order, PathingCell CRC and persistent-cell flags against the format definitions. Synthetic fixture bytes are checked independently of Mutagen's reader.
+
+User-wide Codex/Claude Code registrations and the private mod project's custom launcher point to 0.3.0 for new sessions. Existing server processes remain running. No private mod plugin, installed game data or asset archive was modified. The new exterior kit was still being authored and was not present in the saved mod snapshot inspected during this work; its final geometry still requires its own bake/review and in-game follower test. No CK GUI or game-engine pathfinding test was performed.
+
 ## 0.2.0 navmesh release
 
 The Windows Release build passed **46 tests**, with zero compiler warnings/errors and a self-contained win-x64 publish. Seventeen new navmesh cases cover the four plugin formats, NAVM/NAVI binary round trips, independently decoded grid bytes, Recast radius/clearance/slope/climb behavior, obstacle rejection, disconnected regions and seed filtering, preserved identities, dry runs/rollback, malformed adjacency/grid data, light allocation failure, new-cell boundaries, transformed NIF geometry, missing assets, nearest-surface queries and door links.

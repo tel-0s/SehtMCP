@@ -17,15 +17,16 @@ public sealed record NavmeshScene(NavmeshGeometry Geometry, object[] Sources, ob
     public static NavmeshScene Collect(PluginSession session, string cellKey, AssetService assets, string[] archives, string[]? references)
     {
         if (archives.Length > 64) throw new ArgumentException("At most 64 explicitly ordered archives are supported.");
-        var cell = PluginWorkspace.Find(session, cellKey) as ICellGetter ?? throw new ArgumentException("Expected editable Cell.");
-        if (!cell.Flags.HasFlag(Cell.Flag.IsInteriorCell)) throw new ArgumentException("Cell geometry baking currently supports interiors.");
+        var context = NavmeshCell.Resolve(session, cellKey);
+        var cell = context.Cell;
+        if (cell.Landscape is not null) throw new ArgumentException("This cell contains LAND terrain, which the NIF collector cannot bake. Supply complete terrain/collision proxy triangles to navmesh_generate.");
         var selected = references?.Select(r => FormKey.Factory(r)).ToHashSet();
         if (selected?.Count == 0) throw new ArgumentException("An explicit reference selection cannot be empty.");
         var found = new HashSet<FormKey>();
         var points = new List<Vector3>(); var faces = new List<int[]>(); var sources = new List<object>(); var excluded = new List<object>();
         var models = new Dictionary<string, (NifDocument Nif, string? Archive)>(StringComparer.OrdinalIgnoreCase);
         var degenerate = 0;
-        var placedObjects = cell.Temporary.Concat(cell.Persistent).OfType<IPlacedObjectGetter>().Where(p => selected is null || selected.Contains(p.FormKey)).ToArray();
+        var placedObjects = context.Objects().Where(p => selected is null || selected.Contains(p.FormKey)).ToArray();
         var wantedBases = placedObjects.Select(p => p.Base.FormKey).ToHashSet();
         var bases = new Dictionary<FormKey, Mutagen.Bethesda.Plugins.Records.IMajorRecordGetter>();
         // Resolve the selected bases in one load-order pass, not a full master scan per REFR.

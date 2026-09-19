@@ -32,7 +32,7 @@ public static class Guidance
         10. Inspect the result in xEdit/CK and playtest before distributing. Validation does
             not check quest logic, collision agreement, balance, assets, or runtime behavior.
 
-        New interior navmeshes: navmesh_generate_from_cell bakes placed static NIF render
+        New interior and isolated exterior navmeshes: navmesh_generate_from_cell bakes placed static NIF render
         geometry with Recast. Supply explicit BSA paths in archives when assets are packed.
         It fails on missing/unsupported selected geometry. Render surfaces can differ from
         Havok collision. navmesh_generate instead accepts explicit scene/proxy triangles;
@@ -44,6 +44,13 @@ public static class Guidance
         NAVM/NAVI door links; both teleport endpoints need their own links and runtime checks.
         Regeneration preserves FormKeys and refuses linked meshes or changed component counts.
         plugin_validate checks NAVM topology, lookup bounds/grid, and NAVI consistency.
+        Exterior generation requires a new grid cell in a new parentless worldspace.
+        SmallWorld is supported. Vertices/placements/seeds use world-space coordinates;
+        grid (x,y) spans [x*4096,(x+1)*4096), [y*4096,(y+1)*4096). Keep the kit
+        and resulting navigation inside that cell. No cross-cell stitching or LAND extraction.
+        Use cell_place with persistent=true for exterior doors; it creates/uses the world's
+        persistent cell. navmesh_link_door also moves legacy grid-cell persistent doors there
+        without changing their FormKeys. Runtime actor traversal still needs playtesting.
 
         ESP, ESM, standalone ESL, and ESL-flagged ESP are supported. Light files use the
         conservative 0x800..0xFFF range (2048 new records); compaction is never automatic.

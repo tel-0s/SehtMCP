@@ -34,7 +34,7 @@ public sealed class WorldTools(PluginWorkspace workspace)
         }));
     }
 
-    [McpServerTool(Name = "cell_place", Destructive = false), Description("Place a base object or NPC into an editable Cell. Automatically selects REFR/ACHR and persistent/temporary group. Position uses Skyrim units; rotation uses radians. Base FormKey must resolve. Does not generate navmesh or collision.")]
+    [McpServerTool(Name = "cell_place", Destructive = false), Description("Place a base object or NPC into an editable Cell. Automatically selects REFR/ACHR and persistent/temporary group. Exterior persistent references are stored in the owning worldspace's persistent cell, created if needed. Exterior positions use world-space Skyrim units; rotation uses radians. Base FormKey must resolve. Does not generate navmesh or collision.")]
     public CallToolResult Place(string session, long expectedRevision, string cell, string baseFormKey, string editorId, float x = 0, float y = 0, float z = 0, float rx = 0, float ry = 0, float rz = 0, float scale = 1, bool persistent = false)
     {
         lock (workspace.Gate) return ToolResult.Run(() => workspace.Mutate(session, expectedRevision, s =>
@@ -43,6 +43,18 @@ public sealed class WorldTools(PluginWorkspace workspace)
             var target = PluginWorkspace.Find(s, baseFormKey, true);
             var type = target is INpcGetter ? "PlacedNpc" : "PlacedObject";
             var fields = new JsonObject { ["Base"] = baseFormKey, ["Scale"] = scale, ["Placement"] = new JsonObject { ["Position"] = new JsonObject { ["X"] = x, ["Y"] = y, ["Z"] = z }, ["Rotation"] = new JsonObject { ["X"] = rx, ["Y"] = ry, ["Z"] = rz } } };
+            var owner = PluginWorkspace.Find(s, cell) as Cell ?? throw new ArgumentException("Expected editable Cell.");
+            if (persistent && !owner.Flags.HasFlag(Cell.Flag.IsInteriorCell))
+            {
+                var world = s.Mod.Worldspaces.SingleOrDefault(w => NavmeshCell.Cells(w).Any(c => c.FormKey == owner.FormKey));
+                if (world is not null)
+                {
+                    var context = new NavmeshCell(owner, world);
+                    if (owner.Grid is null || !context.Contains(new(x, y, z))) throw new ArgumentException("Exterior placement must lie inside the target grid cell, in world coordinates.");
+                    cell = context.PersistentCell(s).FormKey.ToString();
+                }
+                else if (!s.Mod.Worldspaces.Any(w => w.TopCell?.FormKey == owner.FormKey)) throw new ArgumentException("Exterior cell has no owning worldspace.");
+            }
             return PluginWorkspace.Brief(PluginWorkspace.CreateRecord(s, type, editorId, fields, cell, persistent ? "Persistent" : "Temporary"));
         }));
     }

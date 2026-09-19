@@ -54,7 +54,7 @@ public sealed class NavmeshTools(PluginWorkspace workspace, AssetService assets)
         });
     }
 
-    [McpServerTool(Name = "navmesh_generate_from_cell", Destructive = false), Description("Collect placed NIF render geometry in a new interior cell and bake NAVM/NAVI with Recast. Defaults to enabled Static references; references can explicitly select architecture/obstacles. Applies NIF node and REFR transforms. Loose files win; archives are explicit BSA paths in low-to-high priority order. Missing/unsupported/animated selected geometry fails the whole operation. Render geometry can differ from Havok collision: review the result or supply collision/proxy triangles to navmesh_generate. Does not process dynamic doors, actors, or conditional enable states. dryRun leaves the session unchanged and reports geometry sources/exclusions.")]
+    [McpServerTool(Name = "navmesh_generate_from_cell", Destructive = false), Description("Collect placed NIF render geometry in a new interior or isolated exterior cell and bake NAVM/NAVI with Recast. Defaults to enabled Static references; references can explicitly select architecture/obstacles. Applies NIF node and REFR transforms. Loose files win; archives are explicit BSA paths in low-to-high priority order. Missing/unsupported/animated selected geometry fails the whole operation. Render geometry can differ from Havok collision: review the result or supply collision/proxy triangles to navmesh_generate. Does not process dynamic doors, actors, or conditional enable states. Exteriors require a new parentless worldspace and output contained in one 4096-unit grid cell. Includes worldspace persistent references anchored in that cell; LAND terrain needs explicit proxy triangles. dryRun leaves the session unchanged and reports geometry sources/exclusions.")]
     public CallToolResult GenerateFromCell(string session, long expectedRevision, string cell, string[]? archives = null, string[]? references = null, NavmeshBuildSettings? settings = null, float[][]? walkableSeeds = null, bool replaceExisting = false, bool dryRun = false)
     {
         lock (workspace.Gate) return ToolResult.Run(() => workspace.Mutate(session, expectedRevision, s =>
@@ -66,14 +66,14 @@ public sealed class NavmeshTools(PluginWorkspace workspace, AssetService assets)
         }, !dryRun));
     }
 
-    [McpServerTool(Name = "navmesh_create", Destructive = false), Description("Create NAVM/NAVI records for a new interior cell from explicitly authored walkable triangles. vertices are [x,y,z] in Skyrim cell coordinates; triangles are zero-based [a,b,c]. Welds identical positions, orients upward, builds reciprocal adjacency and spatial lookup, and separates disconnected components. Does not infer obstacles or actor clearance: use navmesh_generate for that. Atomic; plugin_save persists the result. Rebuilding linked meshes or changing component count is refused.")]
+    [McpServerTool(Name = "navmesh_create", Destructive = false), Description("Create NAVM/NAVI records for a new interior or isolated exterior cell from explicitly authored walkable triangles. vertices are [x,y,z] in Skyrim units (world-space for exteriors); triangles are zero-based [a,b,c]. Welds identical positions, orients upward, builds reciprocal adjacency and spatial lookup, and separates disconnected components. Does not infer obstacles or actor clearance: use navmesh_generate for that. Atomic; plugin_save persists the result. Exteriors require a new parentless worldspace and geometry contained in the target 4096-unit grid cell; no cross-cell stitching. Rebuilding linked meshes or changing component count is refused.")]
     public CallToolResult Create(string session, long expectedRevision, string cell, float[][] vertices, int[][] triangles, bool replaceExisting = false, bool dryRun = false)
     {
         lock (workspace.Gate) return ToolResult.Run(() => workspace.Mutate(session, expectedRevision,
             s => NavmeshRecords.Write(s, cell, NavmeshGeometry.Parse(vertices, triangles), replaceExisting), !dryRun));
     }
 
-    [McpServerTool(Name = "navmesh_generate", Destructive = false), Description("Bake a new interior cell's scene triangle geometry with Recast into Skyrim NAVM/NAVI records. vertices [x,y,z], triangles zero-based [a,b,c], Z-up Skyrim units. Floor winding must face upward; include walls, ceilings, stairs and obstacles to enforce clearance. Settings control actor height/radius, climb, slope and voxel resolution. Returns one NAVM per connected component; all records commit atomically. Geometry is supplied explicitly; this tool does not read Havok collision or the running CK. dryRun leaves the session unchanged.")]
+    [McpServerTool(Name = "navmesh_generate", Destructive = false), Description("Bake a new interior or isolated exterior cell's scene triangle geometry with Recast into Skyrim NAVM/NAVI records. vertices [x,y,z], triangles zero-based [a,b,c], Z-up Skyrim units. Floor winding must face upward; include walls, ceilings, stairs and obstacles to enforce clearance. Settings control actor height/radius, climb, slope and voxel resolution. Returns one NAVM per connected component; all records commit atomically. Geometry is supplied explicitly; this tool does not read Havok collision or the running CK. Exteriors require a new parentless worldspace and output contained in the target 4096-unit grid cell; no cross-cell edge stitching. dryRun leaves the session unchanged.")]
     public CallToolResult Generate(string session, long expectedRevision, string cell, float[][] vertices, int[][] triangles, NavmeshBuildSettings? settings = null, float[][]? walkableSeeds = null, bool replaceExisting = false, bool dryRun = false)
     {
         lock (workspace.Gate) return ToolResult.Run(() => workspace.Mutate(session, expectedRevision,
@@ -96,30 +96,41 @@ public sealed class NavmeshTools(PluginWorkspace workspace, AssetService assets)
         });
     }
 
-    [McpServerTool(Name = "navmesh_link_door", Destructive = false), Description("Associate a persistent teleport-door REFR in this new interior cell with an explicit NAVM triangle. Writes PathingDoor CRC, NAVM Door flag/link, and synchronized NAVI links. Choose a triangle at the door's arrival marker using navmesh_get. Both destination endpoints need valid navmeshes and links; this does not edit teleport destinations, finalize exterior navmeshes, or verify runtime pathing. Refuses moving an existing door link silently.")]
+    [McpServerTool(Name = "navmesh_link_door", Destructive = false), Description("Associate a persistent teleport-door REFR in a new interior or isolated exterior cell with an explicit NAVM triangle. Writes PathingDoor CRC, NAVM Door flag/link, and synchronized NAVI links. Use navmesh_nearest at the local arrival marker (stored on the other endpoint). Exterior doors are resolved by worldspace and world-space position; legacy persistent doors under a grid cell move to its worldspace persistent cell with their FormKey preserved. Both destination endpoints need valid navmeshes and links; this does not edit teleport destinations, stitch exterior edges, or verify runtime pathing. Refuses moving an existing door link silently.")]
     public CallToolResult LinkDoor(string session, long expectedRevision, string navmesh, string door, int triangle)
     {
         lock (workspace.Gate) return ToolResult.Run(() => workspace.Mutate(session, expectedRevision, s =>
         {
             var nav = PluginWorkspace.Find(s, navmesh) as NavigationMesh ?? throw new ArgumentException("Expected editable NAVM.");
-            if (nav.FormKey.ModKey != s.Mod.ModKey || nav.Data?.Parent is not CellNavmeshParent parent) throw new ArgumentException("Expected a new interior NAVM owned by this plugin.");
+            if (nav.FormKey.ModKey != s.Mod.ModKey || nav.IsDeleted || nav.Data is null) throw new ArgumentException("Expected a new, non-deleted NAVM owned by this plugin.");
             var data = nav.Data;
             if (triangle < 0 || triangle >= data.Triangles.Count) throw new ArgumentException("Triangle index out of range.");
-            var cell = PluginWorkspace.Find(s, parent.Parent.FormKey.ToString()) as Cell ?? throw new ArgumentException("Missing editable cell.");
-            var reference = cell.Persistent.OfType<PlacedObject>().FirstOrDefault(r => r.FormKey == FormKey.Factory(door)) ?? throw new ArgumentException("Door must be a persistent PlacedObject in this cell.");
+            if (data.Triangles[triangle].Flags.HasFlag(NavmeshTriangle.Flag.Deleted)) throw new ArgumentException("Cannot link a deleted triangle.");
+            var cell = s.Mod.EnumerateMajorRecords().OfType<Cell>().SingleOrDefault(c => c.NavigationMeshes.Any(n => n.FormKey == nav.FormKey)) ?? throw new ArgumentException("Missing editable owning cell.");
+            var context = NavmeshCell.Resolve(s, cell.FormKey.ToString());
+            if (context.World is null ? data.Parent is not ICellNavmeshParentGetter cp || cp.Parent.FormKey != cell.FormKey :
+                data.Parent is not IWorldspaceNavmeshParentGetter wp || wp.Parent.FormKey != context.World.FormKey || wp.Coordinates != context.SerializedCoordinates)
+                throw new ArgumentException("NAVM parent does not match its owning cell/worldspace grid.");
+            var reference = cell.Persistent.Concat(context.World?.TopCell?.Persistent ?? []).OfType<PlacedObject>().FirstOrDefault(r => r.FormKey == FormKey.Factory(door)) ?? throw new ArgumentException("Door must be a persistent PlacedObject in this cell or its worldspace persistent cell.");
+            if (reference.IsDeleted || (reference.MajorRecordFlagsRaw & 0x400) == 0 || (context.World is not null && (reference.Placement is null || !context.Contains(NavmeshRecords.Point(reference.Placement.Position)))))
+                throw new ArgumentException("Door must be non-deleted, persistent, and positioned in the target exterior grid cell.");
             if (PluginWorkspace.Find(s, reference.Base.FormKey.ToString(), true) is not IDoorGetter || reference.TeleportDestination is null)
                 throw new ArgumentException("Reference must use a Door base and have a teleport destination.");
             var destination = PluginWorkspace.Find(s, reference.TeleportDestination.Door.FormKey.ToString(), true) as IPlacedObjectGetter;
-            if (destination is null || destination.FormKey == reference.FormKey || PluginWorkspace.Find(s, destination.Base.FormKey.ToString(), true) is not IDoorGetter)
+            if (destination is null || destination.IsDeleted || destination.FormKey == reference.FormKey || PluginWorkspace.Find(s, destination.Base.FormKey.ToString(), true) is not IDoorGetter)
                 throw new ArgumentException("Teleport destination must resolve to another placed Door reference.");
-            var old = cell.NavigationMeshes.SelectMany(n => n.Data?.DoorTriangles ?? []).Where(d => d.Door.FormKey == reference.FormKey).ToArray();
+            var old = s.Mod.EnumerateMajorRecords().OfType<INavigationMeshGetter>().SelectMany(n => n.Data?.DoorTriangles ?? []).Where(d => d.Door.FormKey == reference.FormKey).ToArray();
             if (old.Length > 0) throw new ArgumentException("Door already has a navmesh link; refusing to overwrite its triangle association.");
             var map = s.Mod.NavigationMeshInfoMaps.SingleOrDefault(m => m.MapInfos.Any(i => i.NavigationMesh.FormKey == nav.FormKey)) ?? throw new ArgumentException("Expected one editable NAVI entry for this mesh.");
+            // Older generic record_create workflows may have placed a persistent door under the grid cell.
+            // Preserve the REFR identity while moving it to Skyrim's worldspace persistent group.
+            var persistentCell = context.PersistentCell(s);
+            if (context.World is not null && cell.Persistent.Remove(reference)) persistentCell.Persistent.Add(reference);
             data.Triangles[triangle].Flags |= NavmeshTriangle.Flag.Door;
             data.DoorTriangles.Add(new DoorTriangle { TriangleBeforeDoor = checked((short)triangle), Unknown = NavmeshRecords.PathingDoor, Door = reference.FormKey.ToLink<IPlacedObjectGetter>() });
             var index = map.MapInfos.IndexOf(map.MapInfos.Single(i => i.NavigationMesh.FormKey == nav.FormKey));
             map.MapInfos[index] = NavmeshRecords.Info(nav);
-            return new { navmesh, door, triangle, linked = true, destination = destination.FormKey.ToString(), reciprocalTeleport = destination.TeleportDestination?.Door.FormKey == reference.FormKey,
+            return new { navmesh, door, triangle, linked = true, persistentCell = persistentCell.FormKey.ToString(), destination = destination.FormKey.ToString(), reciprocalTeleport = destination.TeleportDestination?.Door.FormKey == reference.FormKey,
                 note = "Validate the destination endpoint separately and test NPC traversal." };
         }));
     }

@@ -17,7 +17,7 @@ builder.Services.AddSingleton<AssetService>();
 builder.Services.AddSingleton<ExternalTools>();
 builder.Services.AddMcpServer(o =>
 {
-    o.ServerInfo = new() { Name = "SehtMCP", Version = "0.2.0" };
+    o.ServerInfo = new() { Name = "SehtMCP", Version = "0.3.0" };
     o.ServerInstructions = "Skyrim SE authoring. Start with seht_status and seht_guide. Discover record_types and record_schema before editing. Use canonical FormKeys (000800:Example.esp), not load-order FormIDs. Changes live in a session until plugin_save. Keep the returned revision for optimistic concurrency. plugin_validate is structural validation, not an in-game playtest. NIF previews are untextured geometry diagnostics.";
 }).WithStdioServerTransport().WithToolsFromAssembly().WithResourcesFromAssembly().WithPromptsFromAssembly();
 await builder.Build().RunAsync();
